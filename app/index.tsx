@@ -7,11 +7,14 @@ import {
   Switch,
   Alert,
   AppState,
+  ActivityIndicator,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 
 import { DEVOTIONAL_VERSES, DevotionalVerse } from "../src/data/devotional";
 import { getFavorites, toggleFavorite } from "../src/services/storage";
+import { subscriptionService } from "../src/services/subscription";
+import { useSubscription } from "../src/components/SubscriptionProvider";
 
 import {
   initNotifications,
@@ -35,11 +38,17 @@ export default function HomeScreen() {
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [interval, setInterval] = useState<1 | 3>(1);
   const [loadingNotif, setLoadingNotif] = useState(true);
+  
+  const { authResult, loading: loadingAuth, refreshAuth } = useSubscription();
 
   const isFav = useMemo(
     () => favoriteIds.includes(verse.id),
     [favoriteIds, verse.id]
   );
+
+  // გამოწერის სტატუსის მიღება authResult-დან
+  const isPremium = authResult?.isAuthorized || false;
+  const isInTrial = authResult?.isInTrial || false;
 
   const loadHomeState = async () => {
     setFavoriteIds(await getFavorites());
@@ -116,6 +125,19 @@ export default function HomeScreen() {
   };
 
   const onSelectInterval = async (h: 1 | 3) => {
+    // პრემიუმ გეითინგი: 3 საათის ინტერვალი მხოლოდ პრემიუმთვის
+    if (h === 3 && !isPremium) {
+      Alert.alert(
+        "პრემიუმ ფუნქცია",
+        "3 საათიანი ინტერვალი ხელმისაწვდომია მხოლოდ პრემიუმ მომხმარებლებისთვის.",
+        [
+          { text: "პრემიუმზე გადასვლა", onPress: () => router.push("/membership") },
+          { text: "გაუქმება", style: "cancel" }
+        ]
+      );
+      return;
+    }
+
     setInterval(h);
     await setIntervalHours(h);
 
@@ -166,10 +188,12 @@ export default function HomeScreen() {
           style={[
             styles.intervalBtn,
             interval === 3 ? styles.intervalBtnOn : styles.intervalBtnOff,
+            !isPremium && !loadingAuth && styles.intervalBtnDisabled,
           ]}
+          disabled={!isPremium && !loadingAuth}
         >
           <Text style={interval === 3 ? styles.intervalTextOn : styles.intervalTextOff}>
-            ყოველ 3 საათში
+            {isPremium ? 'ყოველ 3 საათში' : '🔒 ყოველ 3 საათში'}
           </Text>
         </Pressable>
       </View>
@@ -211,6 +235,25 @@ export default function HomeScreen() {
         <Pressable style={styles.secondaryBtn} onPress={() => router.push("/favorites")}>
           <Text style={styles.secondaryBtnText}>ფავორიტები</Text>
         </Pressable>
+
+        <View style={{ height: 12 }} />
+
+        {/* Premium Button - დინამიური სტატუსით */}
+        {loadingAuth ? (
+          <View style={[styles.premiumBtn, styles.loadingButton]}>
+            <ActivityIndicator color="#FFD700" size="small" />
+          </View>
+        ) : isPremium ? (
+          <Pressable style={[styles.premiumBtn, styles.premiumActiveBtn]} onPress={() => router.push("/settings")}>
+            <Text style={styles.premiumActiveBtnText}>
+              {isInTrial ? '🆓 საცდელი აქტიურია' : '✅ პრემიუმ აქტიურია'}
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.premiumBtn} onPress={() => router.push("/membership")}>
+            <Text style={styles.premiumBtnText}>პრემიუმ წევრობა</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -246,6 +289,10 @@ const styles = StyleSheet.create({
   },
   intervalBtnOn: { backgroundColor: "#2F80ED" },
   intervalBtnOff: { backgroundColor: "#EEE" },
+  intervalBtnDisabled: { 
+    backgroundColor: "#f5f5f5",
+    opacity: 0.6,
+  },
   intervalTextOn: { color: "white", fontWeight: "800" },
   intervalTextOff: { color: "black", fontWeight: "800" },
 
@@ -278,4 +325,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   secondaryBtnText: { fontWeight: "800" },
+  premiumBtn: {
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: "#FFD700",
+    alignItems: "center",
+  },
+  premiumActiveBtn: {
+    backgroundColor: "#28a745",
+  },
+  loadingButton: {
+    opacity: 0.7,
+    justifyContent: "center",
+  },
+  premiumBtnText: { 
+    color: "#333", 
+    fontWeight: "800" 
+  },
+  premiumActiveBtnText: {
+    color: "white",
+    fontWeight: "800",
+  },
 });

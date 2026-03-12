@@ -4,6 +4,7 @@ import { Platform, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { DEVOTIONAL_VERSES } from "../data/devotional";
+import { subscriptionService } from "./subscription";
 
 const CHANNEL_ID = "daily-verse";
 
@@ -62,6 +63,18 @@ export async function getIntervalHours(): Promise<1 | 3> {
 }
 
 export async function setIntervalHours(h: 1 | 3) {
+  // პრემიუმ გეითინგის შემოწმება
+  if (h === 3) {
+    try {
+      const isPremium = await subscriptionService.isPremiumActive();
+      if (!isPremium) {
+        console.log('3 საათიანი ინტერვალის დაყენების მცდელობა - მომხმარებელი არ არის პრემიუმ');
+      }
+    } catch (error) {
+      console.error('პრემიუმ სტატუსის შემოწმების შეცდომა:', error);
+    }
+  }
+  
   await AsyncStorage.setItem(KEY_INTERVAL_HOURS, String(h));
 }
 

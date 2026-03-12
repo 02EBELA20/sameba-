@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import * as Notifications from "expo-notifications";
 
 import { initNotifications, normalizeVerseIdFromData } from "../src/services/notifications";
+import { SubscriptionProvider } from "../src/components/SubscriptionProvider";
+import { authGuard } from "../src/services/authGuard";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -49,15 +51,19 @@ export default function RootLayout() {
   }, [router]);
 
   return (
-    <Stack
-      screenOptions={{
-        headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: "800" },
-      }}
-    >
-      <Stack.Screen name="index" options={{ title: "SAMEBA" }} />
-      <Stack.Screen name="favorites" options={{ title: "ფავორიტები" }} />
-      <Stack.Screen name="verse/[id]" options={{ title: "მუხლი" }} />
-    </Stack>
+    <SubscriptionProvider>
+      <Stack
+        screenOptions={{
+          headerShadowVisible: false,
+          headerTitleStyle: { fontWeight: "800" },
+        }}
+      >
+        <Stack.Screen name="index" options={{ title: "SAMEBA" }} />
+        <Stack.Screen name="favorites" options={{ title: "ფავორიტები" }} />
+        <Stack.Screen name="verse/[id]" options={{ title: "მუხლი" }} />
+        <Stack.Screen name="membership" options={{ title: "პრემიუმ წევრობა" }} />
+        <Stack.Screen name="settings" options={{ title: "პარამეტრები" }} />
+      </Stack>
+    </SubscriptionProvider>
   );
 }
