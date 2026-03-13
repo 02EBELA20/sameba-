@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { DEVOTIONAL_VERSES } from "../src/data/devotional";
 import { getFavorites, toggleFavorite } from "../src/services/storage";
+import { usePremiumGuard } from "../src/hooks/usePremiumGuard";
 
 export default function FavoritesScreen() {
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  const { requirePremium } = usePremiumGuard();
 
   const refresh = async () => {
+    if (!requirePremium('access_favorites')) return;
     setFavoriteIds(await getFavorites());
   };
 

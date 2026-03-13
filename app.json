@@ -1,37 +1,39 @@
 {
   "expo": {
-    "name": "sameba-",
+    "name": "SAMEBA",
     "slug": "sameba-",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "assets/images/mtavari.png",
     "scheme": "sameba",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.levani505.sameba"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/mtavari.png",
+        "backgroundImage": "./assets/images/mtavari.png",
+        "monochromeImage": "./assets/images/mtavari.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.levani505.sameba"
+      "package": "com.levani505.sameba",
+      "versionCode": 10
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/mtavari.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/mtavari.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -58,16 +60,21 @@
     [
       "expo-notifications",
       {
-        "icon": "./assets/images/notification-icon.png",
+        "icon": "./assets/images/mtavari.png",
         "color": "#ffffff"
       }
     ],
     [
       "expo-splash-screen",
-      { "image": "./assets/images/splash-icon.png", "imageWidth": 200, "resizeMode": "contain", "backgroundColor": "#ffffff",
-        "dark": { "backgroundColor": "#000000" }
+      {
+        "image": "./assets/images/mtavari.png",
+        "imageWidth": 200,
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff",
+        "dark": {
+          "backgroundColor": "#000000"
+        }
       }
     ]
   ]
-  
 }

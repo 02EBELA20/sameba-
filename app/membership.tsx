@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { subscriptionService, PackageInfo, CustomerInfo } from '../src/services/subscription';
@@ -19,6 +20,7 @@ export default function MembershipScreen() {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [activeProduct, setActiveProduct] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -31,31 +33,27 @@ export default function MembershipScreen() {
     try {
       setLoading(true);
       
-      // შეთავაზებების ჩატვირთვა
-      const offerings = await subscriptionService.getOfferings();
-      setPackages(offerings.packages);
-
+      // პაკეტების ჩატვირთვა
+      const { packages: fetchedPackages } = await subscriptionService.getOfferings();
+      setPackages(fetchedPackages);
+      
+      // აქტიური პროდუქტის დეტექცია
+      const activeProductData = await subscriptionService.getActiveProduct();
+      setActiveProduct(activeProductData.identifier);
+      
       // მომხმარებლის ინფორმაციის ჩატვირთვა
-      const info = await subscriptionService.getCustomerInfo();
-      setCustomerInfo(info);
-    } catch (error: any) {
+      const customer = await subscriptionService.getCustomerInfo();
+      setCustomerInfo(customer);
+      
+      console.log('🔍 Membership Screen Data:', {
+        activeProduct: activeProductData.identifier,
+        isSubscribed: activeProductData.isActive,
+        packages: fetchedPackages.map(p => ({ id: p.identifier, title: p.title }))
+      });
+      
+    } catch (error) {
       console.error('მონაცემების ჩატვირთვის შეცდომა:', error);
-      
-      let errorMessage = 'გამოწერის ინფორმაციის ჩატვირთვა ვერ მოხერხდა. გთხოვთ ცადოთ მოგვიანებით.';
-      
-      if (error?.message?.includes('credentials')) {
-        errorMessage = 'ავტორიზაციის შეცდომა: RevenueCat API გასაღები არარის კონფიგურირებული. გთხოვთ დააყენით რეალური API key.';
-      } else if (error?.message?.includes('API key')) {
-        errorMessage = 'RevenueCat API key არარის კონფიგურირებული. გთხოვთ დააყენით რეალური API key.';
-      } else if (error?.message?.includes('offerings')) {
-        errorMessage = 'გამოწერის პაკეტები ვერ მოიძებნა. შეამოწმეთ პროდუქტები RevenueCat Dashboard-ში.';
-      } else if (error?.message?.includes('cancelled')) {
-        errorMessage = 'შესყიდვა გაუქმდა.';
-      } else if (error?.message?.includes('network')) {
-        errorMessage = 'ქსელის შეცდომა. გთხოვთ შეამოწმოთ ინტერნეტთან კავშირდ.';
-      }
-      
-      Alert.alert('შეცდომა', errorMessage);
+      Alert.alert('შეცდომა', 'მონაცემების ჩატვირთვა ვერ მოხერხდა');
     } finally {
       setLoading(false);
     }
@@ -68,25 +66,16 @@ export default function MembershipScreen() {
       const newCustomerInfo = await subscriptionService.purchasePackage(packageIdentifier);
       setCustomerInfo(newCustomerInfo);
       
-      // Auth სტატუსის განახლება
+      // აქტიური პროდუქტის განახლება
+      const activeProductData = await subscriptionService.getActiveProduct();
+      setActiveProduct(activeProductData.identifier);
+      
       await refreshAuth();
       
-      Alert.alert(
-        'გამოწერა წარმატებულია ✅',
-        'გმადლობთ გამოწერისთვის! ახლა გაქვთ პრემიუმ ფუნქციებზე წვდომა.'
-      );
-    } catch (error: any) {
+      Alert.alert('წარმატება', 'გამოწერა წარმატებით დასრულდა!');
+    } catch (error) {
       console.error('შესყიდვის შეცდომა:', error);
-      
-      let errorMessage = 'შესყიდვის დროს შეცდომა მოხდა. გთხოვთ ცადოთ მოგვიანებით.';
-      
-      if (error?.message?.includes('credentials')) {
-        errorMessage = 'ავტორიზაციის პრობლემა. გთხოვთ დაელოდოთ და ცადოთ ხელახლა.';
-      } else if (error?.message?.includes('cancelled')) {
-        errorMessage = 'შესყიდვა გაუქმდა.';
-      }
-      
-      Alert.alert('შეცდომა', errorMessage);
+      Alert.alert('შეცდომა', 'გამოწერის დროს შეცდომა მოხდა');
     } finally {
       setPurchasing(null);
     }
@@ -99,17 +88,13 @@ export default function MembershipScreen() {
       const restoredCustomerInfo = await subscriptionService.restorePurchases();
       setCustomerInfo(restoredCustomerInfo);
       
-      // Auth სტატუსის განახლება
+      // აქტიური პროდუქტის განახლება
+      const activeProductData = await subscriptionService.getActiveProduct();
+      setActiveProduct(activeProductData.identifier);
+      
       await refreshAuth();
       
-      const hasActiveSubscription = Object.keys(restoredCustomerInfo.entitlements.active).length > 0;
-      
-      Alert.alert(
-        'აღდგენა დასრულდა',
-        hasActiveSubscription 
-          ? 'თქვენი გამოწერა წარმატებით აღდგა. ✅'
-          : 'აქტიური გამოწერა არ მოიძებნა.'
-      );
+      Alert.alert('წარმატება', 'შესყიდვები წარმატებით აღდგა!');
     } catch (error) {
       console.error('აღდგენის შეცდომა:', error);
       Alert.alert(
@@ -145,27 +130,21 @@ export default function MembershipScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+      removeClippedSubviews={false}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.title}>პრემიუმ წევრობა</Text>
       
-      <Text style={styles.priceInfo}>💰 მხოლოდ $0.99/თვე</Text>
       
-      {/* Charity Section */}
-      <View style={styles.charitySection}>
-        <View style={styles.charityBadge}>
-          <Text style={styles.charityBadgeText}>❤️ 30% for charity</Text>
-        </View>
-        
-        <Text style={styles.charityTitle}>
-          ეს აპლიკაცია შეიქმნა იმისთვის, რომ ადამიანებს დაეხმაროს სულიერი სიმშვიდის პოვნაში ახალი აღთქმის მეშვეობით.
-        </Text>
-        
-        <Text style={styles.charityText}>
-          თქვენი წევრობის მხარდაჭერა გვეხმარება გავაგრძელოთ ეს საქმე.
-        </Text>
-        
-        <Text style={styles.charityHighlight}>
-          თქვენი წევრობის საფასურის 30% მოხმარდება გაჭირველი ადამიანების დახმარებას საქართველოში.
+      
+      <View style={styles.charityBadge}>
+        <Text style={styles.charityBadgeText}>
+          ❤️ შემოსავლის 30% მოხმარდება გაჭირვებულებს საქართველოში.
         </Text>
       </View>
       
@@ -174,46 +153,63 @@ export default function MembershipScreen() {
           <Text style={styles.activeStatusText}>
             {isInTrial ? '🆓 საცდელი აქტიურია' : '✅ აქტიური გამოწერა'}
           </Text>
-          <Text style={styles.activeStatusSubtext}>
-            {isInTrial 
-              ? 'გამოიყენეთ პრემიუმ ფუნქციები საცდელის პერიოდში!'
-              : 'გმადლობთ პრემიუმ ფუნქციებზე წვდომისთვის!'
-            }
-          </Text>
         </View>
       )}
-
+      
       <View style={styles.packagesContainer}>
-        {packages.map((pkg) => (
-          <View key={pkg.identifier} style={styles.packageCard}>
-            <Text style={styles.packageTitle}>{pkg.title}</Text>
-            <Text style={styles.packagePrice}>{pkg.price}</Text>
-            <Text style={styles.packageDescription}>{pkg.description}</Text>
-            
-            <Pressable
-              style={[
-                styles.purchaseButton,
-                isSubscribed && styles.disabledButton,
-                purchasing === pkg.identifier && styles.loadingButton,
-              ]}
-              onPress={() => handlePurchase(pkg.identifier)}
-              disabled={isSubscribed || purchasing !== null}
-            >
-              {purchasing === pkg.identifier ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.purchaseButtonText}>
-                  {isSubscribed ? 'უკვე გამოწერილია' : 'გამოწერა'}
-                </Text>
+        {packages.map((pkg) => {
+          // მხოლოდ სწორის პაკეტების ჩვენება
+          if (pkg.identifier !== '$rc_monthly' && pkg.identifier !== '$rc_annual') {
+            return null;
+          }
+
+          const isMonthly = pkg.identifier === '$rc_monthly';
+          const isAnnual = pkg.identifier === '$rc_annual';
+          
+          // აქტიური პროდუქტის შემოწმება
+          const isActiveProduct = activeProduct === pkg.identifier;
+          
+          // წლიური მომხმარებლისთვის თვიურის დაბლოკვა
+          const isYearlyUser = activeProduct === '$rc_annual';
+          const shouldDisableMonthly = isYearlyUser && isMonthly;
+          
+          return (
+            <View key={pkg.identifier} style={styles.packageCard}>
+              <Text style={styles.packageTitle}>
+                {isMonthly ? 'ყოველთვიური გეგმა' : isAnnual ? 'ყოველწლიური გეგმა' : pkg.title}
+              </Text>
+              
+              <Text style={styles.packagePrice}>{pkg.price}</Text>
+              
+              <Pressable
+                style={[
+                  styles.purchaseButton,
+                  isActiveProduct && styles.disabledButton,
+                  shouldDisableMonthly && styles.disabledButton,
+                  purchasing === pkg.identifier && styles.loadingButton,
+                  isAnnual && styles.annualButton,
+                ]}
+                onPress={() => handlePurchase(pkg.identifier)}
+                disabled={isActiveProduct || shouldDisableMonthly || purchasing !== null}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {purchasing === pkg.identifier ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.purchaseButtonText}>
+                    {isActiveProduct ? 'უკვე გამოწერილია' : 'გამოწერა'}
+                  </Text>
+                )}
+              </Pressable>
+              {isMonthly && (
+                <Text style={styles.trialText}>🕊 3 დღე უფასოდ</Text> 
               )}
-            </Pressable>
-            
-            {/* Debug info */}
-            <Text style={styles.debugInfo}>
-              📦 Package ID: {pkg.identifier}
-            </Text>
-          </View>
-        ))}
+              
+              <View style={styles.buttonSpacing} />
+              
+            </View>
+          );
+        })}
       </View>
 
       <Pressable
@@ -223,32 +219,22 @@ export default function MembershipScreen() {
         ]}
         onPress={handleRestore}
         disabled={purchasing !== null}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         {purchasing === 'restore' ? (
-          <ActivityIndicator color="#2F80ED" size="small" />
+          <ActivityIndicator color="#666" size="small" />
         ) : (
           <Text style={styles.restoreButtonText}>შესყიდვების აღდგენა</Text>
         )}
       </Pressable>
 
-      {/* Subscription Management Section */}
       {isSubscribed && (
         <View style={styles.managementSection}>
-          <Text style={styles.sectionTitle}>გამოწერის მართვა</Text>
-          
-          <Pressable style={styles.manageButton} onPress={handleManageSubscription}>
+          <Pressable style={styles.manageButton} onPress={handleManageSubscription} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.manageButtonText}>📱 Google Play Store-ში მართვა</Text>
           </Pressable>
-          
-          <Text style={styles.manageHint}>
-            გამოწერის გასაუქმებლად ან შესაცვლელად გადადით Play Store-ში
-          </Text>
         </View>
       )}
-
-      <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backButtonText}>უკან</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -257,28 +243,128 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f2ec',
+    paddingTop: 0,
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#333',
+    fontSize: 24,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 16,
+    color: "#333",
   },
-  priceInfo: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#2F80ED',
-    backgroundColor: '#f0f8ff',
+  subtitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "center",
+    marginBottom: 24,
+    color: "#666",
+    lineHeight: 22,
+  },
+  charityBadge: {
+    backgroundColor: '#fff5f5',
     padding: 12,
     borderRadius: 12,
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#b3d9ff',
+    borderColor: '#ffcccc',
+  },
+  charityBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#cc0000',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  packagesContainer: {
+    gap: 20,
+  },
+  packageCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#e7e2d8',
+    alignItems: 'center',
+  },
+  packageTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#333',
+  },
+  packagePrice: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#2F80ED',
+    marginBottom: 20,
+  },
+  trialText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0066cc',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  bestValueBadge: {
+    backgroundColor: '#28a745',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  bestValueText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  buttonSpacing: {
+    height: 8,
+  },
+  purchaseButton: {
+    backgroundColor: '#2F80ED',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  annualButton: {
+    backgroundColor: '#28a745',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
+  loadingButton: {
+    opacity: 0.7,
+  },
+  purchaseButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  restoreButton: {
+    marginTop: 30,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  restoreButtonText: {
+    fontSize: 14,
+    color: '#666',
+    textDecorationLine: 'underline',
+  },
+  backButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#666',
   },
   loadingText: {
     marginTop: 16,
@@ -295,173 +381,25 @@ const styles = StyleSheet.create({
     borderColor: '#c3e6cb',
   },
   activeStatusText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#155724',
     textAlign: 'center',
-    marginBottom: 4,
-  },
-  activeStatusSubtext: {
-    fontSize: 14,
-    color: '#155724',
-    textAlign: 'center',
-  },
-  packagesContainer: {
-    marginBottom: 20,
-  },
-  packageCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  packageTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: '#333',
-  },
-  packagePrice: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#2F80ED',
-    marginBottom: 8,
-  },
-  packageDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  purchaseButton: {
-    backgroundColor: '#2F80ED',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    backgroundColor: '#ccc',
-  },
-  loadingButton: {
-    opacity: 0.7,
-  },
-  purchaseButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  restoreButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#2F80ED',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  restoreButtonText: {
-    color: '#2F80ED',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  backButton: {
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: '#666',
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  debugInfo: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
-    fontFamily: 'monospace',
-    backgroundColor: '#f0f0f0',
-    padding: 4,
-    borderRadius: 4,
   },
   managementSection: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-    color: '#333',
+    marginTop: 20,
+    alignItems: 'center',
   },
   manageButton: {
-    backgroundColor: '#4285f4',
+    backgroundColor: '#28a745',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 8,
   },
   manageButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-  },
-  manageHint: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  charitySection: {
-    backgroundColor: '#fef8f7',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#fde8e3',
-  },
-  charityBadge: {
-    backgroundColor: '#ff6b6b',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  charityBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  charityTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  charityText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  charityHighlight: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ff6b6b',
-    textAlign: 'center',
   },
 });

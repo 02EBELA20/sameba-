@@ -3,7 +3,7 @@ import Purchases, { CustomerInfo as RevenueCatCustomerInfo } from 'react-native-
 
 // RevenueCat API Keys - ეს უნდა შეცვალოთ RevenueCat Dashboard-დან
 const REVENUECAT_API_KEYS = {
-  ios: 'your_ios_api_key_here', // Apple App Store
+  ios: 'appl_YOUR_IOS_API_KEY_HERE', // Apple App Store - შეცვალეთ RevenueCat Dashboard-დან
   android: 'goog_coBmgTFjtJBruDAzfvtYHKVoKWc', // Google Play API Key
 };
 
@@ -197,11 +197,46 @@ class SubscriptionService {
       
       return {
         isActive: true,
-        expiryDate: entitlement.expirationDate
+        expiryDate: entitlement.expirationDate ? new Date(entitlement.expirationDate) : undefined
       };
     } catch (error) {
       console.error('checkPremiumStatus შეცდომა:', error);
       return { isActive: false };
+    }
+  }
+
+  // აქტიური პროდუქტის/პაკეტის დეტექცია
+  async getActiveProduct(): Promise<{ identifier: string | null; isActive: boolean }> {
+    try {
+      await this.initialize();
+      
+      const customerInfo = await Purchases.getCustomerInfo();
+      const activeEntitlements = customerInfo.entitlements.active;
+      
+      if (Object.keys(activeEntitlements).length === 0) {
+        return { identifier: null, isActive: false };
+      }
+
+      // პირველი active entitlement-ის აღება
+      const entitlementKey = Object.keys(activeEntitlements)[0];
+      const entitlement = activeEntitlements[entitlementKey];
+      
+      // პროდუქტის identifier-ის აღება
+      const productIdentifier = entitlement.productIdentifier;
+      
+      console.log('🔍 Active Product Detection:', {
+        productIdentifier,
+        entitlementKey,
+        isActive: true
+      });
+      
+      return { 
+        identifier: productIdentifier || null, 
+        isActive: true 
+      };
+    } catch (error) {
+      console.error('getActiveProduct შეცდომა:', error);
+      return { identifier: null, isActive: false };
     }
   }
 }

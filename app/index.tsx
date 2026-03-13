@@ -15,6 +15,7 @@ import { DEVOTIONAL_VERSES, DevotionalVerse } from "../src/data/devotional";
 import { getFavorites, toggleFavorite } from "../src/services/storage";
 import { subscriptionService } from "../src/services/subscription";
 import { useSubscription } from "../src/components/SubscriptionProvider";
+import { usePremiumGuard } from "../src/hooks/usePremiumGuard";
 
 import {
   initNotifications,
@@ -40,15 +41,12 @@ export default function HomeScreen() {
   const [loadingNotif, setLoadingNotif] = useState(true);
   
   const { authResult, loading: loadingAuth, refreshAuth } = useSubscription();
+  const { requirePremium, canAccessPremium, isInTrial } = usePremiumGuard();
 
   const isFav = useMemo(
     () => favoriteIds.includes(verse.id),
     [favoriteIds, verse.id]
   );
-
-  // გამოწერის სტატუსის მიღება authResult-დან
-  const isPremium = authResult?.isAuthorized || false;
-  const isInTrial = authResult?.isInTrial || false;
 
   const loadHomeState = async () => {
     setFavoriteIds(await getFavorites());
@@ -93,48 +91,47 @@ export default function HomeScreen() {
     router.push({ pathname: "/verse/[id]", params: { id: String(verse.id) } });
   };
 
-  const onToggleFav = async () => {
+  const toggleFav = async () => {
+    if (!requirePremium('save_favorite')) return;
+    
     const next = await toggleFavorite(verse.id);
     setFavoriteIds(next);
   };
 
-  const onToggleNotifications = async (next: boolean) => {
-    if (!next) {
-      await disableVerseNotifications();
-      setNotifEnabled(false);
+  const toggleNotif = async () => {
+    if (!notifEnabled && !requirePremium('enable_notifications')) {
+      Alert.alert("პრემიუმ ფუნქცია", "ნოტიფიკაციები ხელმისაწვდომელია მხოლოდ პრემიუმ მომხმარებლებისთვის.", [
+        { text: "პრემიუმზე გადასვლა", onPress: () => router.push("/membership") },
+        { text: "გაუქმება", style: "cancel" }
+      ]);
       return;
     }
-
-    const res = await enableVerseNotifications();
-
-    if (!res.ok) {
-      setNotifEnabled(false);
-      Alert.alert(
-        "ნებართვა საჭიროა",
-        "შეტყობინებების ჩასართავად გახსენი Settings და ჩართე SAMEBA Notifications.",
-        [
-          { text: "Settings", onPress: openOSNotificationSettings },
-          { text: "გაუქმება", style: "cancel" },
-        ]
-      );
-      return;
+    
+    try {
+      if (notifEnabled) {
+        await disableVerseNotifications();
+        setNotifEnabled(false);
+      } else {
+        const granted = await enableVerseNotifications();
+        if (granted) {
+          setNotifEnabled(true);
+          await maintainScheduleIfNeeded(false);
+        }
+      }
+    } catch (error) {
+      console.error('ნოტიფიკაციის შეცვლის შეცდომა:', error);
+      Alert.alert('შეცდომა', 'ნოტიფიკაციების ჩართვა ვერ მოხერხდა.');
+    } finally {
+      setLoadingNotif(false);
     }
-
-    setNotifEnabled(true);
-    Alert.alert("ჩართულია ✅", `მუხლი გამოჩნდება ყოველ ${interval} საათში ერთხელ.`);
   };
 
   const onSelectInterval = async (h: 1 | 3) => {
-    // პრემიუმ გეითინგი: 3 საათის ინტერვალი მხოლოდ პრემიუმთვის
-    if (h === 3 && !isPremium) {
-      Alert.alert(
-        "პრემიუმ ფუნქცია",
-        "3 საათიანი ინტერვალი ხელმისაწვდომია მხოლოდ პრემიუმ მომხმარებლებისთვის.",
-        [
-          { text: "პრემიუმზე გადასვლა", onPress: () => router.push("/membership") },
-          { text: "გაუქმება", style: "cancel" }
-        ]
-      );
+    if (h === 3 && !canAccessPremium) {
+      Alert.alert("პრემიუმ ფუნქცია", "3 საათიანი ინტერვალი ხელმისაწვდომელია მხოლოდ პრემიუმ მომხმარებლებისთვის.", [
+        { text: "პრემიუმზე გადასვლა", onPress: () => router.push("/membership") },
+        { text: "გაუქმება", style: "cancel" }
+      ]);
       return;
     }
 
@@ -151,7 +148,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.bigTitle}>SAMEBA</Text>
-      <Text style={styles.subtitle}>დღევანდელი სულიერი მუხლი</Text>
+      <Text style={styles.subtitle}>ყოველდღიური მუხლები, რომ ღმერთის სიტყვა მუდამ ჩვენთან იყოს.</Text>
 
       {/* Notifications toggle */}
       <View style={styles.notifRow}>
@@ -164,7 +161,7 @@ export default function HomeScreen() {
 
         <Switch
           value={notifEnabled}
-          onValueChange={onToggleNotifications}
+          onValueChange={toggleNotif}
           disabled={loadingNotif}
         />
       </View>
@@ -188,12 +185,12 @@ export default function HomeScreen() {
           style={[
             styles.intervalBtn,
             interval === 3 ? styles.intervalBtnOn : styles.intervalBtnOff,
-            !isPremium && !loadingAuth && styles.intervalBtnDisabled,
+            !canAccessPremium && !loadingAuth && styles.intervalBtnDisabled,
           ]}
-          disabled={!isPremium && !loadingAuth}
+          disabled={!canAccessPremium && !loadingAuth}
         >
           <Text style={interval === 3 ? styles.intervalTextOn : styles.intervalTextOff}>
-            {isPremium ? 'ყოველ 3 საათში' : '🔒 ყოველ 3 საათში'}
+            {canAccessPremium ? 'ყოველ 3 საათში' : '🔒 ყოველ 3 საათში'}
           </Text>
         </Pressable>
       </View>
@@ -205,7 +202,7 @@ export default function HomeScreen() {
           <Pressable
             onPress={(e: any) => {
               e?.stopPropagation?.();
-              onToggleFav();
+              toggleFav();
             }}
             hitSlop={10}
             style={styles.starBtn}
@@ -226,7 +223,7 @@ export default function HomeScreen() {
       </Pressable>
 
       <View style={styles.btnRow}>
-        <Pressable style={styles.primaryBtn} onPress={() => setVerse(pickRandomVerse())}>
+        <Pressable style={styles.primaryBtn} onPress={() => router.push("/membership")}>
           <Text style={styles.primaryBtnText}>შემდეგი მუხლი</Text>
         </Pressable>
 
@@ -238,13 +235,12 @@ export default function HomeScreen() {
 
         <View style={{ height: 12 }} />
 
-        {/* Premium Button - დინამიური სტატუსით */}
-        {loadingAuth ? (
-          <View style={[styles.premiumBtn, styles.loadingButton]}>
-            <ActivityIndicator color="#FFD700" size="small" />
-          </View>
-        ) : isPremium ? (
-          <Pressable style={[styles.premiumBtn, styles.premiumActiveBtn]} onPress={() => router.push("/settings")}>
+        {/* Premium Status - მოკლებული სტატუსისთვის */}
+        {canAccessPremium ? (
+          <Pressable 
+            style={[styles.premiumBtn, styles.premiumActiveBtn]} 
+            onPress={() => router.push("/settings")}
+          >
             <Text style={styles.premiumActiveBtnText}>
               {isInTrial ? '🆓 საცდელი აქტიურია' : '✅ პრემიუმ აქტიურია'}
             </Text>
@@ -262,7 +258,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, paddingTop: 40 },
   bigTitle: { fontSize: 28, fontWeight: "800" },
-  subtitle: { marginTop: 6, opacity: 0.7 },
+  subtitle: { 
+    fontSize: 18, 
+    fontWeight: "600", 
+    color: "#333333", 
+    textAlign: "center", 
+    marginTop: 10,
+    marginBottom: 10, 
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
 
   notifRow: {
     marginTop: 14,
@@ -340,7 +345,8 @@ const styles = StyleSheet.create({
   },
   premiumBtnText: { 
     color: "#333", 
-    fontWeight: "800" 
+    fontWeight: "800", 
+  
   },
   premiumActiveBtnText: {
     color: "white",

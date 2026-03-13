@@ -56,12 +56,23 @@ export default function RootLayout() {
         screenOptions={{
           headerShadowVisible: false,
           headerTitleStyle: { fontWeight: "800" },
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+          animation: 'slide_from_right',
         }}
       >
         <Stack.Screen name="index" options={{ title: "SAMEBA" }} />
         <Stack.Screen name="favorites" options={{ title: "ფავორიტები" }} />
         <Stack.Screen name="verse/[id]" options={{ title: "მუხლი" }} />
-        <Stack.Screen name="membership" options={{ title: "პრემიუმ წევრობა" }} />
+        <Stack.Screen 
+          name="membership" 
+          options={{ 
+            title: "პრემიუმ წევრობა",
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
+            headerBackButtonDisplayMode: 'minimal',
+          }} 
+        />
         <Stack.Screen name="settings" options={{ title: "პარამეტრები" }} />
       </Stack>
     </SubscriptionProvider>
