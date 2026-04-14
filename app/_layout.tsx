@@ -1,80 +1,53 @@
-// app/_layout.tsx
-import { Stack, useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
-import * as Notifications from "expo-notifications";
-
-import { initNotifications, normalizeVerseIdFromData } from "../src/services/notifications";
-import { SubscriptionProvider } from "../src/components/SubscriptionProvider";
-import { authGuard } from "../src/services/authGuard";
+import * as Notifications from 'expo-notifications';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { ReadingModeProvider } from '../src/contexts/ReadingModeContext';
+import { initNotifications, maintainScheduleIfNeeded, normalizeVerseIdFromData } from '../src/services/notifications';
 
 export default function RootLayout() {
   const router = useRouter();
-
-  const handledInitialRef = useRef(false);
-  const lastNavigatedVerseRef = useRef<string | null>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
-    let mounted = true;
+    initNotifications();
 
-    (async () => {
-      initNotifications();
-
-      if (!mounted) return;
-      if (handledInitialRef.current) return;
-      handledInitialRef.current = true;
-
-      const last = await Notifications.getLastNotificationResponseAsync();
-      const data = last?.notification?.request?.content?.data as any;
-      const verseId = normalizeVerseIdFromData(data);
-
+    const handleNotificationResponse = (response: any) => {
+      const verseId = normalizeVerseIdFromData(response.notification.request.content.data);
       if (verseId) {
-        lastNavigatedVerseRef.current = verseId;
-        router.push({ pathname: "/verse/[id]", params: { id: verseId } });
+        router.push(`/verse/${verseId}`);
       }
-    })();
-
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as any;
-      const verseId = normalizeVerseIdFromData(data);
-      if (!verseId) return;
-
-      if (lastNavigatedVerseRef.current === verseId) return;
-
-      lastNavigatedVerseRef.current = verseId;
-      router.push({ pathname: "/verse/[id]", params: { id: verseId } });
-    });
-
-    return () => {
-      mounted = false;
-      sub.remove();
     };
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      handleNotificationResponse
+    );
+
+    return () => subscription.remove();
   }, [router]);
 
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        maintainScheduleIfNeeded();
+      }
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => subscription.remove();
+  }, []);
+
   return (
-    <SubscriptionProvider>
-      <Stack
-        screenOptions={{
-          headerShadowVisible: false,
-          headerTitleStyle: { fontWeight: "800" },
-          gestureEnabled: true,
-          gestureDirection: 'horizontal',
-          animation: 'slide_from_right',
-        }}
-      >
-        <Stack.Screen name="index" options={{ title: "SAMEBA" }} />
-        <Stack.Screen name="favorites" options={{ title: "ფავორიტები" }} />
-        <Stack.Screen name="verse/[id]" options={{ title: "მუხლი" }} />
-        <Stack.Screen 
-          name="membership" 
-          options={{ 
-            title: "პრემიუმ წევრობა",
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
-            headerBackButtonDisplayMode: 'minimal',
-          }} 
-        />
-        <Stack.Screen name="settings" options={{ title: "პარამეტრები" }} />
+    <ReadingModeProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+        <Stack.Screen name="verse/[id]" options={{ headerShown: false }} />
       </Stack>
-    </SubscriptionProvider>
+    </ReadingModeProvider>
   );
 }
