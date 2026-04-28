@@ -177,7 +177,10 @@ export default function HomeScreen() {
           style={styles.verseContainer}
           onPress={() => router.push(`/verse/${randomVerse.id}`)}
         >
-          <Text style={[styles.verseText, { color: colors.text }]}>
+          <Text 
+            style={[styles.verseText, { color: colors.text }]}
+            numberOfLines={0}
+          >
             {randomVerse.text}
           </Text>
         </TouchableOpacity>
