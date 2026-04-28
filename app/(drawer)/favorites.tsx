@@ -1,80 +1,85 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
+import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useReadingMode } from '../../src/contexts/ReadingModeContext';
-import { getDevotionalVerseById } from '../../src/data/devotional';
-import { getFavorites, toggleFavorite } from '../../src/services/storage';
 
 export default function FavoritesScreen() {
   const { readingMode } = useReadingMode();
   const colors = getThemeColors(readingMode);
   const router = useRouter();
-  
-  const [favorites, setFavorites] = useState<number[]>([]);
-  const [favoriteVerses, setFavoriteVerses] = useState<any[]>([]);
+  const { favorites, removeFavorite } = useFavorites();
 
-  useEffect(() => {
-    loadFavorites();
-  }, []);
+  console.log("FAVORITES in screen:", favorites);
 
-  const loadFavorites = async () => {
-    const favs = await getFavorites();
-    setFavorites(favs);
+  const getGeorgianBookName = (book: string) => {
+    const names: Record<string, string> = {
+      matthew: 'მათე',
+      mark: 'მარკოზი',
+      luke: 'ლუკა',
+      john: 'იოანე'
+    };
+    return names[book] || book;
+  };
+
+  const getDisplayReference = (item: any) => {
+    if (item.source === 'gospel' && item.book && item.chapter && item.verse) {
+      return `${getGeorgianBookName(item.book)} ${item.chapter}:${item.verse}`;
+    } else if (item.source === 'devotional') {
+      return 'ლექსიკონი';
+    }
+    return '';
+  };
+
+  const handleVersePress = (item: any) => {
+    if (item.source === 'gospel' && item.book && item.chapter) {
+      router.push(`/gospels/${item.book}/${item.chapter}`);
+    } else if (item.source === 'devotional') {
+      // Extract index from devotional ID
+      const index = item.id.replace('devotional-', '');
+      router.push(`/verse/${index}`);
+    }
+  };
+
+  const handleRemoveFavorite = async (id: string) => {
+    if (id) {
+      await removeFavorite(id);
+    }
+  };
+
+  const renderFavoriteItem = ({ item }: { item: any }) => {
+    // Do NOT render any item without valid text
+    if (!item || !item.text || item.text.trim() === "") return null;
     
-    const verses = favs
-      .map(id => getDevotionalVerseById(id))
-      .filter(Boolean);
-    setFavoriteVerses(verses);
-  };
-
-  const handleToggleFavorite = async (id: number) => {
-    const newFavorites = await toggleFavorite(id);
-    setFavorites(newFavorites);
-    
-    const verses = newFavorites
-      .map(favId => getDevotionalVerseById(favId))
-      .filter(Boolean);
-    setFavoriteVerses(verses);
-  };
-
-  const handleVersePress = (id: number) => {
-    router.push(`/verse/${id}`);
-  };
-
-  const renderFavoriteItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.favoriteItem, { backgroundColor: colors.cardBackground }]}
-      onPress={() => handleVersePress(item.id)}
-    >
-      <View style={styles.itemHeader}>
-        <Text style={[styles.verseReference, { color: colors.primary }]}>
-          {item.book} {item.chapter}:{item.verse}
+    return (
+      <TouchableOpacity
+        style={[styles.favoriteItem, { backgroundColor: colors.cardBackground }]}
+        onPress={() => handleVersePress(item)}
+      >
+        <View style={styles.itemHeader}>
+          <Text style={[styles.verseReference, { color: colors.primary }]}>
+            {getDisplayReference(item)}
+          </Text>
+          <TouchableOpacity
+            onPress={() => handleRemoveFavorite(item.id)}
+            style={styles.favoriteButton}
+          >
+            <Ionicons
+              name="star"
+              size={20}
+              color={colors.goldAccent}
+            />
+          </TouchableOpacity>
+        </View>
+        
+        <Text style={[styles.verseText, { color: colors.text, flex: 1, flexWrap: 'wrap', width: '100%' }]}>
+          {item.text}
         </Text>
-        <TouchableOpacity
-          onPress={() => handleToggleFavorite(item.id)}
-          style={styles.favoriteButton}
-        >
-          <Ionicons
-            name="star"
-            size={20}
-            color={colors.goldAccent}
-          />
-        </TouchableOpacity>
-      </View>
-      
-      <Text style={[styles.verseText, { color: colors.text }]}>
-        {item.text}
-      </Text>
-      
-      {item.explanation && (
-        <Text style={[styles.explanationText, { color: colors.textSecondary }]}>
-          {item.explanation}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (favorites.length === 0) {
     return (
@@ -109,9 +114,9 @@ export default function FavoritesScreen() {
       </View>
       
       <FlatList
-        data={favoriteVerses}
+        data={favorites}
         renderItem={renderFavoriteItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
@@ -140,7 +145,7 @@ const styles = StyleSheet.create({
   },
   favoriteItem: {
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -162,14 +167,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   verseText: {
-    fontSize: TYPOGRAPHY.fontSize.base,
-    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
+    fontSize: 17,
+    lineHeight: 24,
     marginBottom: 8,
-  },
-  explanationText: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
-    fontStyle: 'italic',
   },
   emptyContainer: {
     flex: 1,

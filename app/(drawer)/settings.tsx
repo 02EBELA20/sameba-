@@ -10,62 +10,62 @@ export default function SettingsScreen() {
 
   const handleContactSupport = () => {
     Alert.alert(
-      '1.  2.  3.  4.  5.  6.  7. ',
-      '1.  2.  3.  4.  5.  6.  7. ',
+      'მხარდაჭერა',
+      'დაგვიკავშირდით ელფოსტის მეშვეობით',
       [
-        { text: '1.  2.  3.  4.  5.  6.  7. ', style: 'cancel' },
-        { text: '1.  2.  3.  4.  5.  6.  7. ', onPress: () => Linking.openURL('mailto:support@sameba.app') },
+        { text: 'გაუქმება', style: 'cancel' },
+        { text: 'გაგზავნა', onPress: () => Linking.openURL('mailto:support@sameba.app') },
       ]
     );
   };
 
   const handleRateApp = () => {
     Alert.alert(
-      '1.  2.  3.  4.  5.  6.  7. ',
-      '1.  2.  3.  4.  5.  6.  7. ',
+      'შეფასება',
+      'გთხოვთ შეაფასოთ ჩვენი აპლიკაცია App Store-ში',
       [
-        { text: '1.  2.  3.  4.  5.  6.  7. ', style: 'cancel' },
-        { text: '1.  2.  3.  4.  5.  6.  7. ', onPress: () => Linking.openURL('https://apps.apple.com/app/sameba') },
+        { text: 'გაუქმება', style: 'cancel' },
+        { text: 'შეფასება', onPress: () => Linking.openURL('https://apps.apple.com/app/sameba') },
       ]
     );
   };
 
   const settingsSections = [
     {
-      title: '1.  2.  3.  4.  5.  6.  7. ',
+      title: 'გამოყენება',
       items: [
         {
           icon: 'moon-outline' as const,
-          title: '1.  2.  3.  4.  5.  6.  7. ',
-          subtitle: readingMode ? '1.  2.  3.  4.  5.  6.  7. ' : '1.  2.  3.  4.  5.  6.  7. ',
+          title: 'ბნელი რეჟიმი',
+          subtitle: readingMode ? 'ჩართულია' : 'გამორთულია',
           onPress: toggleReadingMode,
         },
       ],
     },
     {
-      title: '1.  2.  3.  4.  5.  6.  7. ',
+      title: 'მხარდაჭერა',
       items: [
         {
           icon: 'star-outline' as const,
-          title: '1.  2.  3.  4.  5.  6.  7. ',
-          subtitle: '1.  2.  3.  4.  5.  6.  7. ',
+          title: 'შეფასება',
+          subtitle: 'შეაფასეთ აპლიკაცია',
           onPress: handleRateApp,
         },
         {
           icon: 'mail-outline' as const,
-          title: '1.  2.  3.  4.  5.  6.  7. ',
-          subtitle: '1.  2.  3.  4.  5.  6.  7. ',
+          title: 'დაგვიკავშირდით',
+          subtitle: 'მხარდაჭერის გუნდი',
           onPress: handleContactSupport,
         },
       ],
     },
     {
-      title: '1.  2.  3.  4.  5.  6.  7. ',
+      title: 'ინფორმაცია',
       items: [
         {
           icon: 'information-circle-outline' as const,
-          title: '1.  2.  3.  4.  5.  6.  7. ',
-          subtitle: '1.  2.  3.  4.  5.  6.  7. ',
+          title: 'ვერსია',
+          subtitle: 'ვერსია 1.0.0',
           onPress: () => {},
         },
       ],
@@ -76,7 +76,7 @@ export default function SettingsScreen() {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          1.  2.  3.  4.  5.  6.  7. 
+          პარამეტრები
         </Text>
       </View>
 
@@ -121,10 +121,10 @@ export default function SettingsScreen() {
 
       <View style={styles.footer}>
         <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-          1.  2.  3.  4.  5.  6.  7. 
+          © 2024 სამება
         </Text>
         <Text style={[styles.versionText, { color: colors.textSecondary }]}>
-          1.  2.  3.  4.  5.  6.  7. 
+          ვერსია 1.0.0
         </Text>
       </View>
     </ScrollView>

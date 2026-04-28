@@ -1,50 +1,58 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-
-const commandments = [
-  { number: "I", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "II", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "III", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "IV", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "V", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "VI", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "VII", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "VIII", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "IX", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-  { number: "X", text: "  1.  2.  3.  4.  5.  6.  7.  " },
-];
+import { useReadingMode } from '../../src/contexts/ReadingModeContext';
+import { COMMANDMENTS } from '../../src/data/commandments';
 
 export default function TenCommandmentsScreen() {
   const { readingMode } = useReadingMode();
   const colors = getThemeColors(readingMode);
+  const [expandedCommandment, setExpandedCommandment] = useState<number | null>(null);
+
+  const toggleCommandment = (index: number) => {
+    setExpandedCommandment(expandedCommandment === index ? null : index);
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          1.  2.  3.  4.  5.  6.  7.  1.  2.  3.  4.  5.  6.  7. 
+          ათი მცნება
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          1.  2.  3.  4.  5.  6.  7. 
+          მოსეს მთაზე მოცემული ათი მცნება
         </Text>
       </View>
 
-      {commandments.map((commandment, index) => (
-        <View
+      {COMMANDMENTS.map((commandment, index) => (
+        <TouchableOpacity
           key={index}
           style={[styles.commandmentCard, { backgroundColor: colors.cardBackground }]}
+          onPress={() => toggleCommandment(index)}
+          activeOpacity={0.7}
         >
           <View style={styles.commandmentHeader}>
             <Text style={[styles.commandmentNumber, { color: colors.primary }]}>
               {commandment.number}
             </Text>
+            <Ionicons
+              name={expandedCommandment === index ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={colors.primary}
+            />
           </View>
-          <Text style={[styles.commandmentText, { color: colors.text }]}>
+          <Text 
+            style={[
+              styles.commandmentText, 
+              { color: colors.text },
+              expandedCommandment === index ? styles.commandmentTextExpanded : styles.commandmentTextCollapsed
+            ]}
+            numberOfLines={expandedCommandment === index ? undefined : 2}
+          >
             {commandment.text}
           </Text>
-        </View>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );
@@ -81,6 +89,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   commandmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
@@ -89,6 +99,16 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.fontWeight.bold,
   },
   commandmentText: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
+    textAlign: 'center',
+  },
+  commandmentTextCollapsed: {
+    fontSize: TYPOGRAPHY.fontSize.base,
+    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
+    textAlign: 'center',
+  },
+  commandmentTextExpanded: {
     fontSize: TYPOGRAPHY.fontSize.base,
     lineHeight: TYPOGRAPHY.lineHeight.relaxed,
     textAlign: 'center',

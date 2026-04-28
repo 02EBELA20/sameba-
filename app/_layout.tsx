@@ -1,9 +1,36 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, TouchableOpacity } from 'react-native';
+import { FavoritesProvider } from '../src/contexts/FavoritesContext';
 import { ReadingModeProvider } from '../src/contexts/ReadingModeContext';
 import { initNotifications, maintainScheduleIfNeeded, normalizeVerseIdFromData } from '../src/services/notifications';
+
+// BackButton component
+function BackButton() {
+  const router = useRouter();
+  
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (router.canGoBack()) {
+          router.back();
+        }
+      }}
+      style={{
+        padding: 8,
+        marginRight: 8,
+      }}
+    >
+      <Ionicons
+        name="arrow-back"
+        size={24}
+        color="#FAF6F0"
+      />
+    </TouchableOpacity>
+  );
+}
 
 export default function RootLayout() {
   const router = useRouter();
@@ -43,11 +70,54 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ReadingModeProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-        <Stack.Screen name="verse/[id]" options={{ headerShown: false }} />
-      </Stack>
-    </ReadingModeProvider>
+    <FavoritesProvider>
+      <ReadingModeProvider>
+        <Stack 
+          screenOptions={{
+            headerShown: true,
+            headerLeft: () => <BackButton />,
+            headerStyle: {
+              backgroundColor: '#8B6F47',
+            },
+            headerTintColor: '#FAF6F0',
+            headerTitleStyle: {
+              fontWeight: '600',
+            },
+          }}
+        >
+          <Stack.Screen 
+            name="(drawer)" 
+            options={{ 
+              headerShown: false,
+              title: 'SAMEBA'
+            }} 
+          />
+          <Stack.Screen 
+            name="verse/[id]" 
+            options={{ 
+              title: 'ლექსიკონი'
+            }} 
+          />
+          <Stack.Screen 
+            name="gospels" 
+            options={{ 
+              title: 'სახარება'
+            }} 
+          />
+          <Stack.Screen 
+            name="gospels/[book]" 
+            options={{ 
+              title: 'სახარება'
+            }} 
+          />
+          <Stack.Screen 
+            name="gospels/[book]/[chapter]" 
+            options={{ 
+              title: 'თავი'
+            }} 
+          />
+        </Stack>
+      </ReadingModeProvider>
+    </FavoritesProvider>
   );
 }

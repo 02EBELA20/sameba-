@@ -31,6 +31,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/mtavari.png",
+          "color": "#ffffff"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/mtavari.png",
@@ -54,27 +61,5 @@
       }
     },
     "owner": "levani505"
-  },
-  "plugins": [
-    "expo-router",
-    [
-      "expo-notifications",
-      {
-        "icon": "./assets/images/mtavari.png",
-        "color": "#ffffff"
-      }
-    ],
-    [
-      "expo-splash-screen",
-      {
-        "image": "./assets/images/mtavari.png",
-        "imageWidth": 200,
-        "resizeMode": "contain",
-        "backgroundColor": "#ffffff",
-        "dark": {
-          "backgroundColor": "#000000"
-        }
-      }
-    ]
-  ]
+  }
 }

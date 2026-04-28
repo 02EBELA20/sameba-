@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { DrawerContentScrollView } from '@react-navigation/drawer';
+import { useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getThemeColors } from '../../src/constants/theme';
 import { useReadingMode } from '../../src/contexts/ReadingModeContext';
 
@@ -9,14 +10,16 @@ function CustomDrawerContent(props: any) {
   const { readingMode } = useReadingMode();
   const colors = getThemeColors(readingMode);
 
+  const router = useRouter();
+
   const menuItems = [
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'home-outline' as const, route: '/(drawer)/' },
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'search-outline' as const, route: '/(drawer)/search' },
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'star-outline' as const, route: '/(drawer)/favorites' },
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'list-outline' as const, route: '/(drawer)/ten-commandments' },
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'heart-outline' as const, route: '/(drawer)/prayers' },
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'book-outline' as const, route: '/(drawer)/scriptures' },
-    { title: '  1.  2.  3.  4.  5.  6.  7.  ', icon: 'settings-outline' as const, route: '/(drawer)/settings' },
+    { title: 'მთავარი', icon: 'home-outline' as const, route: '/' },
+    { title: 'ძიება', icon: 'search-outline' as const, route: '/search' },
+    { title: 'ფავორიტები', icon: 'star-outline' as const, route: '/favorites' },
+    { title: 'ათი მცნება', icon: 'list-outline' as const, route: '/ten-commandments' },
+    { title: 'ლოცვები', icon: 'heart-outline' as const, route: '/prayers' },
+    { title: 'წმინდა წერილები', icon: 'book-outline' as const, route: '/spiritual-materials' },
+    { title: 'პარამეტრები', icon: 'settings-outline' as const, route: '/settings' },
   ];
 
   return (
@@ -35,24 +38,26 @@ function CustomDrawerContent(props: any) {
 
       <View style={styles.menuContainer}>
         {menuItems.map((item, index) => (
-          <DrawerItem
+          <Pressable
             key={index}
-            label={() => (
-              <Text style={[styles.menuItemText, { color: colors.text }]}>
-                {item.title}
-              </Text>
-            )}
-            icon={() => (
+            style={({ pressed }) => [
+              styles.menuItem,
+              { backgroundColor: pressed ? colors.primary + '30' : colors.cardBackground }
+            ]}
+            onPress={() => router.push(item.route as any)}
+          >
+            <View style={styles.menuItemContent}>
               <Ionicons
                 name={item.icon}
                 size={22}
                 color={colors.primary}
                 style={styles.menuIcon}
               />
-            )}
-            onPress={() => props.navigation.navigate(item.route)}
-            style={[styles.drawerItem, { backgroundColor: colors.cardBackground }]}
-          />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>
+                {item.title}
+              </Text>
+            </View>
+          </Pressable>
         ))}
       </View>
     </DrawerContentScrollView>
@@ -85,7 +90,8 @@ export default function DrawerLayout() {
       <Drawer.Screen name="favorites" options={{ title: 'ფავორიტები' }} />
       <Drawer.Screen name="ten-commandments" options={{ title: 'ათი მცნება' }} />
       <Drawer.Screen name="prayers" options={{ title: 'ლოცვები' }} />
-      <Drawer.Screen name="scriptures" options={{ title: 'წიგნები' }} />
+      <Drawer.Screen name="spiritual-materials" options={{ title: 'სულიერი მასალები' }} />
+      <Drawer.Screen name="spiritual-materials/gospels" options={{ title: 'სახარება' }} />
       <Drawer.Screen name="settings" options={{ title: 'პარამეტრები' }} />
     </Drawer>
   );
@@ -96,33 +102,44 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   headerSubtitle: {
     fontSize: 14,
     textAlign: 'center',
+    lineHeight: 18,
   },
   menuContainer: {
     flex: 1,
-    paddingTop: 10,
+    paddingTop: 16,
   },
-  drawerItem: {
-    marginVertical: 2,
-    marginHorizontal: 12,
-    borderRadius: 8,
+  menuItem: {
+    marginVertical: 3,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    minHeight: 52,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   menuItemText: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
   },
   menuIcon: {
-    marginLeft: 8,
+    marginRight: 16,
+    marginLeft: 0,
   },
 });

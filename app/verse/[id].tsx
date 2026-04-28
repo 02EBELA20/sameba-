@@ -1,45 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, Alert } from 'react-native';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
-import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-import { getDevotionalVerseById } from '../../src/data/devotional';
-import { getFavorites, toggleFavorite } from '../../src/services/storage';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
+import { useFavorites } from '../../src/contexts/FavoritesContext';
+import { useReadingMode } from '../../src/contexts/ReadingModeContext';
+import { getDevotionalVerseById } from '../../src/data/devotional';
 
 export default function VerseDetailScreen() {
   const { readingMode } = useReadingMode();
   const colors = getThemeColors(readingMode);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { toggleFavorite, isFavorite: checkIsFavorite } = useFavorites();
   
   const [verse, setVerse] = useState<any>(null);
-  const [favorites, setFavorites] = useState<number[]>([]);
   const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (id) {
-      const verseData = getDevotionalVerseById(id);
+      const verseData = getDevotionalVerseById(parseInt(id, 10));
       setVerse(verseData);
     }
-    loadFavorites();
   }, [id]);
 
   useEffect(() => {
     if (verse) {
-      setIsFavorite(favorites.includes(verse.id));
+      const verseId = `devotional-${id}`;
+      setIsFavorite(checkIsFavorite(verseId));
     }
-  }, [favorites, verse]);
-
-  const loadFavorites = async () => {
-    const favs = await getFavorites();
-    setFavorites(favs);
-  };
+  }, [verse, checkIsFavorite]);
 
   const handleToggleFavorite = async () => {
     if (!verse) return;
-    const newFavorites = await toggleFavorite(verse.id);
-    setFavorites(newFavorites);
+    const verseId = `devotional-${id}`;
+    const item = {
+      id: verseId,
+      text: verse.text,
+      book: verse.book,
+      chapter: verse.chapter,
+      verse: verse.verse || parseInt(id),
+      source: 'devotional' as const
+    };
+    toggleFavorite(item);
   };
 
   const handleShare = async () => {
@@ -63,14 +66,14 @@ export default function VerseDetailScreen() {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            1.  2.  3.  4.  5.  6.  7. 
+            მუხლი არ მოიძებნა
           </Text>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.primary }]}
             onPress={handleBack}
           >
             <Text style={[styles.backButtonText, { color: colors.white }]}>
-              1.  2.  3.  4.  5.  6.  7. 
+              უკან
             </Text>
           </TouchableOpacity>
         </View>
@@ -106,20 +109,9 @@ export default function VerseDetailScreen() {
           </Text>
         </View>
 
-        <Text style={[styles.verseText, { color: colors.text }]}>
+        <Text style={[styles.verseText, { color: colors.text, flex: 1, flexWrap: 'wrap', width: '100%' }]}>
           {verse.text}
         </Text>
-
-        {verse.explanation && (
-          <View style={styles.explanationContainer}>
-            <Text style={[styles.explanationTitle, { color: colors.textSecondary }]}>
-              1.  2.  3.  4.  5.  6.  7. 
-            </Text>
-            <Text style={[styles.explanationText, { color: colors.textSecondary }]}>
-              {verse.explanation}
-            </Text>
-          </View>
-        )}
       </View>
     </ScrollView>
   );
@@ -169,22 +161,6 @@ const styles = StyleSheet.create({
     lineHeight: TYPOGRAPHY.lineHeight.relaxed,
     textAlign: 'center',
     marginBottom: 24,
-  },
-  explanationContainer: {
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  explanationTitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  explanationText: {
-    fontSize: TYPOGRAPHY.fontSize.base,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
-    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,

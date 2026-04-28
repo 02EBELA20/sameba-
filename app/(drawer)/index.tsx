@@ -3,40 +3,49 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
+import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useReadingMode } from '../../src/contexts/ReadingModeContext';
-import { getRandomDevotionalVerse, getVersePreview } from '../../src/data/devotional';
+import { getRandomDevotionalVerse } from '../../src/data/devotional';
 import {
-    disableVerseNotifications,
-    enableVerseNotifications,
-    getIntervalHours,
-    getNotifEnabled,
-    setIntervalHours
+  disableVerseNotifications,
+  enableVerseNotifications,
+  getIntervalHours,
+  getNotifEnabled,
+  setIntervalHours
 } from '../../src/services/notifications';
-import { getFavorites, toggleFavorite } from '../../src/services/storage';
 
 export default function HomeScreen() {
   const { readingMode, toggleReadingMode } = useReadingMode();
   const colors = getThemeColors(readingMode);
   const router = useRouter();
+  const { toggleFavorite, isFavorite } = useFavorites();
     
   const [randomVerse, setRandomVerse] = useState(getRandomDevotionalVerse());
-  const [favorites, setFavorites] = useState<number[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [intervalHours, setIntervalHoursLocal] = useState<1 | 3 | 6 | 12 | 24>(6);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteState, setIsFavoriteState] = useState(false);
 
   useEffect(() => {
-    loadFavorites();
     loadNotificationSettings();
   }, []);
 
   useEffect(() => {
-    setIsFavorite(favorites.includes(randomVerse.id));
-  }, [favorites, randomVerse]);
+    const verseId = `devotional-${randomVerse.id}`;
+    setIsFavoriteState(isFavorite(verseId));
+  }, [randomVerse, isFavorite]);
 
-  const loadFavorites = async () => {
-    const favs = await getFavorites();
-    setFavorites(favs);
+  const handleToggleFavorite = () => {
+    if (!randomVerse) return;
+    const verseId = `devotional-${randomVerse.id}`;
+    const item = {
+      id: verseId,
+      text: randomVerse.text,
+      book: randomVerse.book,
+      chapter: randomVerse.chapter,
+      verse: randomVerse.verse,
+      source: 'devotional' as const
+    };
+    toggleFavorite(item);
   };
 
   const loadNotificationSettings = async () => {
@@ -63,11 +72,6 @@ export default function HomeScreen() {
     await setIntervalHours(hours);
   };
 
-  const handleToggleFavorite = async () => {
-    const newFavorites = await toggleFavorite(randomVerse.id);
-    setFavorites(newFavorites);
-  };
-
   const handleShare = async () => {
     try {
       await Share.share({
@@ -88,32 +92,22 @@ export default function HomeScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.primary }]}>
-          სამება
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.title, { color: colors.white }]}>
+          SAMEBA
         </Text>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>
-            კითხვის რეჟიმი
-          </Text>
-          <Switch
-            value={readingMode}
-            onValueChange={toggleReadingMode}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.white}
+        <TouchableOpacity onPress={toggleReadingMode} style={styles.readingModeButton}>
+          <Ionicons 
+            name={readingMode ? 'moon' : 'sunny'} 
+            size={24} 
+            color={colors.white} 
           />
-        </View>
-        <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
-          {readingMode ? 'ბნელი რეჟიმი' : 'ჩვეული რეჟიმი'}
-        </Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>
+      <View style={[styles.compactCard, { backgroundColor: colors.cardBackground }]}>
+        <View style={styles.compactCardHeader}>
+          <Text style={[styles.compactCardTitle, { color: colors.text }]}>
             შეტყობინებები
           </Text>
           <Switch
@@ -125,16 +119,16 @@ export default function HomeScreen() {
         </View>
         
         {notificationsEnabled && (
-          <View style={styles.intervalContainer}>
-            <Text style={[styles.intervalLabel, { color: colors.textSecondary }]}>
+          <View style={styles.compactIntervalContainer}>
+            <Text style={[styles.compactIntervalLabel, { color: colors.textSecondary }]}>
               ინტერვალი:
             </Text>
-            <View style={styles.intervalButtons}>
+            <View style={styles.compactIntervalButtons}>
               {[1, 3, 6, 12, 24].map((hours) => (
                 <TouchableOpacity
                   key={hours}
                   style={[
-                    styles.intervalButton,
+                    styles.compactIntervalButton,
                     intervalHours === hours 
                       ? { backgroundColor: colors.primary } 
                       : { backgroundColor: colors.border }
@@ -143,7 +137,7 @@ export default function HomeScreen() {
                 >
                   <Text
                     style={[
-                      styles.intervalButtonText,
+                      styles.compactIntervalButtonText,
                       { 
                         color: intervalHours === hours 
                           ? colors.white 
@@ -160,7 +154,7 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+      <View style={[styles.verseCard, { backgroundColor: colors.cardBackground }]}>
         <View style={styles.verseHeader}>
           <Text style={[styles.verseReference, { color: colors.primary }]}>
             {randomVerse.book} {randomVerse.chapter}:{randomVerse.verse}
@@ -168,13 +162,13 @@ export default function HomeScreen() {
           <View style={styles.verseActions}>
             <TouchableOpacity onPress={handleToggleFavorite} style={styles.actionButton}>
               <Ionicons
-                name={isFavorite ? 'star' : 'star-outline'}
-                size={24}
-                color={isFavorite ? colors.goldAccent : colors.primary}
+                name={isFavoriteState ? 'star' : 'star-outline'}
+                size={20}
+                color={isFavoriteState ? colors.goldAccent : colors.primary}
               />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
-              <Ionicons name="share-outline" size={24} color={colors.primary} />
+              <Ionicons name="share-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -184,14 +178,14 @@ export default function HomeScreen() {
           onPress={() => router.push(`/verse/${randomVerse.id}`)}
         >
           <Text style={[styles.verseText, { color: colors.text }]}>
-            {getVersePreview(randomVerse.text, 150)}
+            {randomVerse.text}
           </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
+          style={[styles.button, { backgroundColor: colors.primary, width: '100%' }]}
           onPress={handleNextVerse}
         >
           <Text style={[styles.buttonText, { color: colors.white }]}>
@@ -202,19 +196,19 @@ export default function HomeScreen() {
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.accent, flex: 1, marginRight: 8 }]}
+          style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
           onPress={() => router.push('/(drawer)/favorites' as any)}
         >
-          <Text style={[styles.buttonText, { color: colors.white }]}>
+          <Text style={[styles.buttonText, { color: colors.white }]} numberOfLines={2}>
             ფავორიტები
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.accent, flex: 1, marginLeft: 8 }]}
+          style={[styles.button, { backgroundColor: colors.secondary, flex: 1 }]}
           onPress={() => router.push('/(drawer)/settings' as any)}
         >
-          <Text style={[styles.buttonText, { color: colors.white }]}>
+          <Text style={[styles.buttonText, { color: colors.white }]} numberOfLines={2}>
             პარამეტრები
           </Text>
         </TouchableOpacity>
@@ -228,99 +222,127 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    padding: 24,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    marginBottom: 20,
   },
   title: {
     fontSize: TYPOGRAPHY.fontSize.xxxl,
     fontWeight: TYPOGRAPHY.fontWeight.bold,
+    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
   },
-  card: {
+  compactCard: {
     borderRadius: 16,
     padding: 20,
-    marginBottom: 20,
+    marginHorizontal: 24,
+    marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  cardHeader: {
+  verseCard: {
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  readingModeButton: {
+    padding: 10,
+    borderRadius: 24,
+  },
+  compactCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  cardTitle: {
+  compactCardTitle: {
     fontSize: TYPOGRAPHY.fontSize.lg,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    lineHeight: TYPOGRAPHY.lineHeight.normal,
   },
-  cardSubtitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    marginTop: 4,
+  compactIntervalContainer: {
+    marginTop: 12,
   },
-  intervalContainer: {
-    marginTop: 16,
-  },
-  intervalLabel: {
+  compactIntervalLabel: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     marginBottom: 8,
+    lineHeight: TYPOGRAPHY.lineHeight.normal,
   },
-  intervalButtons: {
+  compactIntervalButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  intervalButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  compactIntervalButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
-    minWidth: 50,
+    minWidth: 44,
     alignItems: 'center',
   },
-  intervalButtonText: {
+  compactIntervalButtonText: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     fontWeight: TYPOGRAPHY.fontWeight.medium,
+    lineHeight: TYPOGRAPHY.lineHeight.normal,
   },
   verseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   verseReference: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    lineHeight: TYPOGRAPHY.lineHeight.normal,
   },
   verseActions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 20,
   },
   actionButton: {
-    padding: 8,
+    padding: 10,
   },
   verseContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   verseText: {
-    fontSize: TYPOGRAPHY.fontSize.base,
+    fontSize: 17,
     lineHeight: TYPOGRAPHY.lineHeight.relaxed,
+    textAlign: 'left',
   },
   buttonRow: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 24,
+    marginHorizontal: 24,
+    gap: 12,
   },
   button: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
   },
   buttonText: {
     fontSize: TYPOGRAPHY.fontSize.base,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    lineHeight: TYPOGRAPHY.lineHeight.normal,
+    textAlign: 'center',
   },
 });

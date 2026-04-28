@@ -151,7 +151,10 @@ export async function maintainScheduleIfNeeded(force: boolean = false): Promise<
             data: { verseId: verse.id.toString() },
             sound: 'default',
           },
-          trigger: triggerDate as any,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: triggerDate,
+          },
         });
       }
     }

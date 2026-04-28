@@ -1,35 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
-import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-import { DEVOTIONAL_VERSES } from '../../src/data/devotional';
-import { getDevotionalVerseById } from '../../src/data/devotional';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
+import { useReadingMode } from '../../src/contexts/ReadingModeContext';
+import { searchVerses } from '../../src/utils/verse';
 
-const prayers = [
-  { id: 1, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 2, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 3, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 4, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 5, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 6, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 7, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-  { id: 8, title: "  1.  2.  3.  4.  5.  6.  7.  ", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'prayer' },
-];
-
-const commandments = [
-  { number: "I", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "II", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "III", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "IV", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "V", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "VI", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "VII", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "VIII", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "IX", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-  { number: "X", text: "  1.  2.  3.  4.  5.  6.  7.  ", category: 'commandment' },
-];
 
 export default function SearchScreen() {
   const { readingMode } = useReadingMode();
@@ -39,48 +15,11 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-
-    const query = searchQuery.toLowerCase();
-    const results: any[] = [];
-
-    DEVOTIONAL_VERSES.forEach(verse => {
-      if (
-        verse.text.toLowerCase().includes(query) ||
-        verse.book.toLowerCase().includes(query) ||
-        verse.explanation?.toLowerCase().includes(query)
-      ) {
-        results.push({
-          ...verse,
-          category: 'verse',
-          title: `${verse.book} ${verse.chapter}:${verse.verse}`,
-        });
-      }
-    });
-
-    prayers.forEach(prayer => {
-      if (
-        prayer.title.toLowerCase().includes(query) ||
-        prayer.text.toLowerCase().includes(query)
-      ) {
-        results.push({ ...prayer });
-      }
-    });
-
-    commandments.forEach(commandment => {
-      if (commandment.text.toLowerCase().includes(query)) {
-        results.push({
-          ...commandment,
-          title: `1.  2.  3.  4.  5.  6.  7.  ${commandment.number}`,
-        });
-      }
-    });
-
-    return results.slice(0, 30);
+    return searchVerses(searchQuery);
   }, [searchQuery]);
 
   const handleResultPress = (result: any) => {
-    if (result.category === 'verse') {
+    if (result.type === 'verse') {
       router.push(`/verse/${result.id}`);
     }
   };
@@ -92,9 +31,9 @@ export default function SearchScreen() {
     >
       <View style={styles.resultHeader}>
         <Text style={[styles.resultCategory, { color: colors.primary }]}>
-          {item.category === 'verse' && '1.  2.  3.  4.  5.  6.  7. '}
-          {item.category === 'prayer' && '1.  2.  3.  4.  5.  6.  7. '}
-          {item.category === 'commandment' && '1.  2.  3.  4.  5.  6.  7. '}
+          {item.type === 'verse' && 'მუხლი'}
+          {item.type === 'prayer' && 'ლოცვა'}
+          {item.type === 'commandment' && 'მცნება'}
         </Text>
         <Text style={[styles.resultTitle, { color: colors.text }]}>
           {item.title}
@@ -114,7 +53,7 @@ export default function SearchScreen() {
           <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="1.  2.  3.  4.  5.  6.  7. "
+            placeholder="ძიება მუხლებში, ლოცვებსა და მცნებებში..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -132,14 +71,14 @@ export default function SearchScreen() {
         <FlatList
           data={searchResults}
           renderItem={renderSearchResult}
-          keyExtractor={(item, index) => `${item.category}-${item.id || index}`}
+          keyExtractor={(item, index) => `${item.type}-${item.id || index}`}
           contentContainerStyle={styles.resultsContainer}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="search" size={48} color={colors.border} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                1.  2.  3.  4.  5.  6.  7. 
+                ვერ მოიძებნა შედეგები
               </Text>
             </View>
           }
