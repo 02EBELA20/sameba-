@@ -1,7 +1,7 @@
 // Re-export all types from data files for centralized access
-export type { DevotionalVerse } from '../data/devotional';
-export type { Prayer } from '../data/prayers';
 export type { Commandment } from '../data/commandments';
+export type { DevotionalItem } from '../data/devotional';
+export type { Prayer } from '../data/prayers';
 
 // App-wide types
 export type SearchResult = {

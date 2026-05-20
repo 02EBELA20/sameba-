@@ -2,7 +2,7 @@
   "expo": {
     "name": "SAMEBA",
     "slug": "sameba-",
-    "version": "1.0.0",
+    "version": "2.5.43",
     "orientation": "portrait",
     "icon": "assets/images/mtavari.png",
     "scheme": "sameba",
@@ -22,7 +22,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.levani505.sameba",
-      "versionCode": 10
+      "versionCode": 43
     },
     "web": {
       "output": "static",

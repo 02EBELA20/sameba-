@@ -3,11 +3,9 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
 
 export default function SpiritualMaterialsScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
 
   const sections = [
@@ -37,7 +35,7 @@ export default function SpiritualMaterialsScreen() {
       {sections.map((section) => (
         <TouchableOpacity
           key={section.id}
-          style={[styles.sectionCard, { backgroundColor: colors.cardBackground }]}
+          style={[styles.sectionCard, { backgroundColor: colors.surface }]}
           onPress={() => router.push(section.route as any)}
           activeOpacity={0.7}
         >

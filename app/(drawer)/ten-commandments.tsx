@@ -1,13 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
 import { COMMANDMENTS } from '../../src/data/commandments';
 
 export default function TenCommandmentsScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const [expandedCommandment, setExpandedCommandment] = useState<number | null>(null);
 
   const toggleCommandment = (index: number) => {
@@ -15,22 +13,30 @@ export default function TenCommandmentsScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          ათი მცნება
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          მოსეს მთაზე მოცემული ათი მცნება
-        </Text>
-      </View>
+    <ImageBackground
+      source={require('../../assets/images/clouds-bg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <ScrollView 
+        style={[styles.container, { backgroundColor: 'transparent' }]}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            ათი მცნება
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            მოსეს მთაზე მოცემული ათი მცნება
+          </Text>
+        </View>
 
-      {COMMANDMENTS.map((commandment, index) => (
-        <TouchableOpacity
-          key={index}
-          style={[styles.commandmentCard, { backgroundColor: colors.cardBackground }]}
-          onPress={() => toggleCommandment(index)}
-          activeOpacity={0.7}
+        {COMMANDMENTS.map((commandment, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[styles.commandmentCard, { backgroundColor: 'rgba(255, 255, 255, 0.88)' }]}
+            onPress={() => toggleCommandment(index)}
+            activeOpacity={0.7}
         >
           <View style={styles.commandmentHeader}>
             <Text style={[styles.commandmentNumber, { color: colors.primary }]}>
@@ -55,12 +61,21 @@ export default function TenCommandmentsScreen() {
         </TouchableOpacity>
       ))}
     </ScrollView>
+      </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 120,
   },
   header: {
     padding: 20,
@@ -82,6 +97,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     padding: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

@@ -1,5 +1,5 @@
 import { COMMANDMENTS } from '../data/commandments';
-import { DEVOTIONAL_VERSES } from '../data/devotional';
+import { DEVOTIONALS } from '../data/devotional';
 import { getAllPrayers } from '../data/prayers';
 import { SearchResult } from '../types';
 
@@ -13,7 +13,7 @@ export function searchVerses(query: string): SearchResult[] {
   const results: SearchResult[] = [];
 
   // 🔍 Search in devotional verses
-  DEVOTIONAL_VERSES.forEach((verse) => {
+  DEVOTIONALS.forEach((verse: any) => {
     const matchesText = verse.text.toLowerCase().includes(normalizedQuery);
     const matchesBook = verse.book.toLowerCase().includes(normalizedQuery);
     const matchesReference = `${verse.book} ${verse.chapter}:${verse.verse}`
@@ -22,7 +22,7 @@ export function searchVerses(query: string): SearchResult[] {
 
     if (matchesText || matchesBook || matchesReference) {
       results.push({
-        id: verse.id.toString(),
+        id: verse.id,
         type: 'verse',
         title: `${verse.book} ${verse.chapter}:${verse.verse}`,
         content: verse.text,

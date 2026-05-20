@@ -1,51 +1,88 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-import { useFavorites } from '../../src/contexts/FavoritesContext';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
-import { getRandomDevotionalVerse } from '../../src/data/devotional';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  disableVerseNotifications,
-  enableVerseNotifications,
+  AppState,
+  AppStateStatus,
+  ImageBackground,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+
+import { getThemeColors } from '../../src/constants/theme';
+import { useFavorites } from '../../src/contexts/FavoritesContext';
+import { getNextDevotional, type DevotionalItem } from '../../src/data/devotional';
+
+import {
+  disableDevotionalNotifications,
+  enableDevotionalNotifications,
   getIntervalHours,
   getNotifEnabled,
-  setIntervalHours
+  initNotifications,
+  refreshDevotionalNotificationSchedule,
+  updateNotificationInterval
 } from '../../src/services/notifications';
 
 export default function HomeScreen() {
-  const { readingMode, toggleReadingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   const { toggleFavorite, isFavorite } = useFavorites();
-    
-  const [randomVerse, setRandomVerse] = useState(getRandomDevotionalVerse());
+
+  const [devotional, setDevotional] = useState<DevotionalItem | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [intervalHours, setIntervalHoursLocal] = useState<1 | 3 | 6 | 12 | 24>(6);
-  const [isFavoriteState, setIsFavoriteState] = useState(false);
+  const [previousDevotionals, setPreviousDevotionals] = useState<DevotionalItem[]>([]);
+  const [nextDevotionals, setNextDevotionals] = useState<DevotionalItem[]>([]);
+
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    // Initialize notifications on app start
+    initNotifications();
     loadNotificationSettings();
+    loadDevotional();
+    
+    // Refresh notification schedule on app start
+    refreshDevotionalNotificationSchedule();
+
+    // Handle app state changes (foreground/background)
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App came to foreground, refresh notification schedule
+        refreshDevotionalNotificationSchedule();
+      }
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
   }, []);
 
-  useEffect(() => {
-    const verseId = `devotional-${randomVerse.id}`;
-    setIsFavoriteState(isFavorite(verseId));
-  }, [randomVerse, isFavorite]);
+  const loadDevotional = async () => {
+    const next = await getNextDevotional();
+    setDevotional(next);
+  };
 
+  
   const handleToggleFavorite = () => {
-    if (!randomVerse) return;
-    const verseId = `devotional-${randomVerse.id}`;
-    const item = {
-      id: verseId,
-      text: randomVerse.text,
-      book: randomVerse.book,
-      chapter: randomVerse.chapter,
-      verse: randomVerse.verse,
-      source: 'devotional' as const
-    };
-    toggleFavorite(item);
+    if (!devotional) return;
+
+    toggleFavorite({
+      id: devotional.id,
+      text: devotional.text,
+      book: devotional.book,
+      chapter: devotional.chapter,
+      verse: devotional.verse,
+      type: 'devotional'
+    });
   };
 
   const loadNotificationSettings = async () => {
@@ -57,295 +94,463 @@ export default function HomeScreen() {
 
   const handleToggleNotifications = async () => {
     if (notificationsEnabled) {
-      await disableVerseNotifications();
-      setNotificationsEnabled(false);
+      const result = await disableDevotionalNotifications();
+      if (result.ok) setNotificationsEnabled(false);
     } else {
-      const result = await enableVerseNotifications();
-      if (result.ok) {
-        setNotificationsEnabled(true);
-      }
+      const result = await enableDevotionalNotifications(intervalHours);
+      if (result.ok) setNotificationsEnabled(true);
     }
   };
 
   const handleIntervalChange = async (hours: 1 | 3 | 6 | 12 | 24) => {
     setIntervalHoursLocal(hours);
-    await setIntervalHours(hours);
-  };
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `${randomVerse.book} ${randomVerse.chapter}:${randomVerse.verse}\n\n${randomVerse.text}`,
-      });
-    } catch (error) {
-      console.error('Error sharing:', error);
+    const result = await updateNotificationInterval(hours);
+    if (!result.ok) {
+      console.error('Failed to update notification interval:', result.reason);
     }
   };
 
-  const handleNextVerse = () => {
-    const nextVerse = getRandomDevotionalVerse([randomVerse.id]);
-    setRandomVerse(nextVerse);
+  
+  const handleShare = async () => {
+    if (!devotional) return;
+    
+    await Share.share({
+      message: `${devotional.book} ${devotional.chapter}:${devotional.verse}\n\n${devotional.text}`,
+    });
   };
 
+  const handleNextVerse = async () => {
+    if (!devotional) return;
+    
+    // Save current devotional to previous history
+    setPreviousDevotionals(prev => [...prev, devotional]);
+    
+    // Get next devotional from forward history or generate new one
+    let nextDevotional: DevotionalItem;
+    if (nextDevotionals.length > 0) {
+      // Take from forward history
+      const nextHistory = [...nextDevotionals];
+      nextDevotional = nextHistory.pop()!;
+      setNextDevotionals(nextHistory);
+    } else {
+      // Generate new devotional using existing logic
+      nextDevotional = await getNextDevotional();
+    }
+    
+    setDevotional(nextDevotional);
+  };
+
+  const handlePreviousVerse = () => {
+    if (!devotional || previousDevotionals.length === 0) return;
+    
+    // Save current devotional to forward history
+    setNextDevotionals(prev => [...prev, devotional]);
+    
+    // Get previous devotional from history
+    const prevHistory = [...previousDevotionals];
+    const previousDevotional = prevHistory.pop()!;
+    setPreviousDevotionals(prevHistory);
+    
+    setDevotional(previousDevotional);
+  };
+
+
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.contentContainer}
+    <ImageBackground
+      source={require('../../assets/images/clouds-bg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.title, { color: colors.white }]}>
-          SAMEBA
-        </Text>
-        <TouchableOpacity onPress={toggleReadingMode} style={styles.readingModeButton}>
-          <Ionicons 
-            name={readingMode ? 'moon' : 'sunny'} 
-            size={24} 
-            color={colors.white} 
-          />
-        </TouchableOpacity>
+      <ScrollView
+        style={[styles.container, { backgroundColor: 'transparent' }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View style={styles.header}>
+          <Text style={styles.samebaTitle}>
+            SAMEBA
+          </Text>
+        </View>
       </View>
 
-      <View style={[styles.compactCard, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.compactCardHeader}>
-          <Text style={[styles.compactCardTitle, { color: colors.text }]}>
+      {/* NOTIFICATIONS */}
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={styles.row}>
+          <Text style={[styles.label, { color: colors.text }]}>
             შეტყობინებები
           </Text>
+
           <Switch
             value={notificationsEnabled}
             onValueChange={handleToggleNotifications}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.white}
           />
         </View>
-        
-        {notificationsEnabled && (
-          <View style={styles.compactIntervalContainer}>
-            <Text style={[styles.compactIntervalLabel, { color: colors.textSecondary }]}>
-              ინტერვალი:
-            </Text>
-            <View style={styles.compactIntervalButtons}>
-              {[1, 3, 6, 12, 24].map((hours) => (
-                <TouchableOpacity
-                  key={hours}
-                  style={[
-                    styles.compactIntervalButton,
-                    intervalHours === hours 
-                      ? { backgroundColor: colors.primary } 
-                      : { backgroundColor: colors.border }
-                  ]}
-                  onPress={() => handleIntervalChange(hours as 1 | 3 | 6 | 12 | 24)}
-                >
-                  <Text
-                    style={[
-                      styles.compactIntervalButtonText,
-                      { 
-                        color: intervalHours === hours 
-                          ? colors.white 
-                          : colors.text 
-                      }
-                    ]}
-                  >
-                    {hours}სთ
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-      </View>
 
-      <View style={[styles.verseCard, { backgroundColor: colors.cardBackground }]}>
+        <View style={styles.intervalRow}>
+          {[1, 3, 6, 12, 24].map((h, index) => (
+            <TouchableOpacity
+              key={`${h}-${index}`}
+              onPress={() => handleIntervalChange(h as any)}
+              style={[
+                styles.intervalBtn,
+                intervalHours === h && { backgroundColor: colors.primary }
+              ]}
+            >
+              <Text style={{
+                color: intervalHours === h ? '#fff' : colors.text
+              }}>
+                {h}სთ
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+              </View>
+
+      {/* VERSE */}
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+
         <View style={styles.verseHeader}>
-          <Text style={[styles.verseReference, { color: colors.primary }]}>
-            {randomVerse.book} {randomVerse.chapter}:{randomVerse.verse}
+          <Text style={[styles.ref, { color: colors.primary }]}>
+            {devotional?.book} {devotional?.chapter}:{devotional?.verse}
           </Text>
-          <View style={styles.verseActions}>
-            <TouchableOpacity onPress={handleToggleFavorite} style={styles.actionButton}>
+
+          <View style={styles.actions}>
+            <TouchableOpacity onPress={handleToggleFavorite}>
               <Ionicons
-                name={isFavoriteState ? 'star' : 'star-outline'}
+                name={devotional && isFavorite(devotional.id) ? 'star' : 'star-outline'}
                 size={20}
-                color={isFavoriteState ? colors.goldAccent : colors.primary}
+                color={devotional && isFavorite(devotional.id) ? '#FACC15' : colors.primary}
               />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
+
+            <TouchableOpacity onPress={handleShare}>
               <Ionicons name="share-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.verseContainer}
-          onPress={() => router.push(`/verse/${randomVerse.id}`)}
+
+        <TouchableOpacity
+          onPress={() => devotional && router.push(`/verse/${devotional.id}`)}
+          style={{ width: '100%' }}
         >
-          <Text 
-            style={[styles.verseText, { color: colors.text }]}
-            numberOfLines={0}
-          >
-            {randomVerse.text}
+          <Text style={[styles.verseText, { color: colors.text }]}>
+            {devotional?.text}
           </Text>
         </TouchableOpacity>
+
+        {devotional ? (
+          <TouchableOpacity
+            style={styles.explanationLink}
+            onPress={() =>
+              router.push({
+                pathname: "/verse/[id]",
+                params: { id: devotional.id },
+              })
+            }
+            activeOpacity={0.75}
+          >
+            <View style={styles.explanationLinkContent}>
+              <Text style={styles.explanationLinkText}>განმარტების ნახვა</Text>
+              <Ionicons name="chevron-forward" size={14} color="#9E7540" style={styles.chevronIcon} />
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
+
       </View>
 
-      <View style={styles.buttonRow}>
+      {/* DEVOTIONAL NAVIGATION BUTTONS */}
+      <View style={styles.homeActionRow}>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, width: '100%' }]}
+          style={[
+            styles.homeActionButton,
+            previousDevotionals.length === 0 && styles.disabledNavButton
+          ]}
+          onPress={handlePreviousVerse}
+          disabled={previousDevotionals.length === 0}
+        >
+          <Text
+            style={styles.homeActionButtonText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            ← წინა მუხლი
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.homeActionButton}
           onPress={handleNextVerse}
         >
-          <Text style={[styles.buttonText, { color: colors.white }]}>
-            შემდეგი მუხლი
+          <Text
+            style={styles.homeActionButtonText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            შემდეგი მუხლი →
           </Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, flex: 1 }]}
-          onPress={() => router.push('/(drawer)/favorites' as any)}
+      <TouchableOpacity
+        style={styles.homeActionFullButton}
+        onPress={() => router.push('/(drawer)/favorites')}
+      >
+        <Text
+          style={styles.homeActionButtonText}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
         >
-          <Text style={[styles.buttonText, { color: colors.white }]} numberOfLines={2}>
-            ფავორიტები
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.secondary, flex: 1 }]}
-          onPress={() => router.push('/(drawer)/settings' as any)}
-        >
-          <Text style={[styles.buttonText, { color: colors.white }]} numberOfLines={2}>
-            პარამეტრები
-          </Text>
-        </TouchableOpacity>
-      </View>
+          ☆ ფავორიტები
+        </Text>
+      </TouchableOpacity>
+
+
     </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+
+  backgroundImage: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 24,
+  container: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingTop: 2,
   },
+
+  section: {
+    marginBottom: 24,
+  },
+
+  content: {
+    paddingBottom: 40
+  },
+
   header: {
+    alignItems: 'center',
+    marginBottom: 20
+  },
+
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
-    marginBottom: 20,
+    width: '100%'
   },
-  title: {
-    fontSize: TYPOGRAPHY.fontSize.xxxl,
-    fontWeight: TYPOGRAPHY.fontWeight.bold,
-    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
-  },
-  compactCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 24,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  verseCard: {
+
+  themeToggle: {
+    position: 'absolute',
+    right: 16,
+    top: 10,
+    padding: 8,
     borderRadius: 20,
-    padding: 24,
-    marginHorizontal: 24,
-    marginBottom: 24,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  samebaTitle: {
+    width: '100%',
+    textAlign: 'center',
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#2F2F2F',
+    marginTop: 30,
+    
+  },
+
+  card: {
+    width: '100%',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 18,
+    backgroundColor: '#F8F6F2',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
-  readingModeButton: {
-    padding: 10,
-    borderRadius: 24,
-  },
-  compactCardHeader: {
+
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    gap: 10
   },
-  compactCardTitle: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
+
+  label: {
+    fontSize: 16,
+    flex: 1,
+    lineHeight: 24,
   },
-  compactIntervalContainer: {
-    marginTop: 12,
-  },
-  compactIntervalLabel: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    marginBottom: 8,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
-  },
-  compactIntervalButtons: {
+
+  intervalRow: {
     flexDirection: 'row',
-    gap: 8,
+    marginTop: 10,
+    gap: 8
   },
-  compactIntervalButton: {
+
+  intervalBtn: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    minWidth: 44,
-    alignItems: 'center',
+    backgroundColor: '#eee'
   },
-  compactIntervalButtonText: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: TYPOGRAPHY.fontWeight.medium,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
-  },
+
   verseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    alignItems: 'flex-start', // 🔥 FIX
+    marginBottom: 10
   },
-  verseReference: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
+
+  ref: {
+    fontSize: 14,
+    fontWeight: '600'
   },
-  verseActions: {
+
+  actions: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 12
   },
-  actionButton: {
-    padding: 10,
-  },
-  verseContainer: {
-    marginBottom: 20,
-  },
+
   verseText: {
     fontSize: 17,
-    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
-    textAlign: 'left',
+    lineHeight: 26,
+    flexShrink: 1,
+    flexWrap: 'wrap'
   },
-  buttonRow: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    marginHorizontal: 24,
-    gap: 12,
-  },
+
   button: {
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
   },
+
   buttonText: {
-    fontSize: TYPOGRAPHY.fontSize.base,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
+
+  homeButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  homeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  buttonPrimary: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+
+  homeActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+    marginHorizontal: 28,
+  },
+
+  homeActionButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 1,
+    paddingVertical: 1,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+
+  homeActionFullButton: {
+    minHeight: 48,
+    marginTop: 10,
+    marginHorizontal: 28,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+
+  homeActionButtonText: {
+    color: '#2F6F8F',
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    backgroundColor: 'transparent',
+  },
+
+  disabledNavButton: {
+    opacity: 0.35,
+  },
+
+  explanationLink: {
+    marginTop: 14,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(160, 120, 70, 0.10)',
+  },
+
+  explanationLinkText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9E7540',
+  },
+
+  explanationLinkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  chevronIcon: {
+    marginLeft: 4,
+  }
+
 });

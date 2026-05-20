@@ -1,6 +1,5 @@
 import { getThemeColors, TYPOGRAPHY } from '@/src/constants/theme';
 import { useFavorites } from '@/src/contexts/FavoritesContext';
-import { useReadingMode } from '@/src/contexts/ReadingModeContext';
 import { BIBLE } from '@/src/data/bible';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -8,8 +7,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ChapterScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const { book, chapter } = useLocalSearchParams();
   const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -38,7 +36,7 @@ export default function ChapterScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <Text style={[styles.title, { color: colors.text }]}>
           თავი {chapter}
         </Text>
@@ -52,7 +50,7 @@ export default function ChapterScreen() {
               <Ionicons
                 name={isFavorite(`gospel-${book}-${chapterNumber}-${v.verse}`) ? "star" : "star-outline"}
                 size={20}
-                color={isFavorite(`gospel-${book}-${chapterNumber}-${v.verse}`) ? colors.goldAccent : colors.textSecondary}
+                color={isFavorite(`gospel-${book}-${chapterNumber}-${v.verse}`) ? colors.primary : colors.textSecondary}
               />
             </TouchableOpacity>
             <Text style={[styles.verse, { color: colors.text, flex: 1, flexWrap: 'wrap', width: '100%' }]}>

@@ -2,13 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getThemeColors } from '../../src/constants/theme';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
 
 function CustomDrawerContent(props: any) {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
 
   const router = useRouter();
 
@@ -19,30 +17,31 @@ function CustomDrawerContent(props: any) {
     { title: 'ათი მცნება', icon: 'list-outline' as const, route: '/ten-commandments' },
     { title: 'ლოცვები', icon: 'heart-outline' as const, route: '/prayers' },
     { title: 'წმინდა წერილები', icon: 'book-outline' as const, route: '/spiritual-materials' },
-    { title: 'პარამეტრები', icon: 'settings-outline' as const, route: '/settings' },
   ];
 
   return (
-    <DrawerContentScrollView
-      {...props}
-      contentContainerStyle={[styles.drawerContent, { backgroundColor: colors.background }]}
+    <ImageBackground
+      source={require('../../assets/images/clouds-bg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.primary }]}>
-          სამება
-        </Text>
-        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-          სამების სახელითა, მამისა, ძისა და სულიწმინდისა, ამინ.
-        </Text>
-      </View>
+      <DrawerContentScrollView
+        {...props}
+        contentContainerStyle={styles.drawerContent}
+      >
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.drawerTitle, { color: colors.primary }]}>
+            SAMEBA
+          </Text>
+        </View>
 
-      <View style={styles.menuContainer}>
+        <View style={styles.menuContainer}>
         {menuItems.map((item, index) => (
           <Pressable
-            key={index}
+            key={`${item.title}-${index}`}
             style={({ pressed }) => [
               styles.menuItem,
-              { backgroundColor: pressed ? colors.primary + '30' : colors.cardBackground }
+              { backgroundColor: pressed ? colors.primary + '30' : colors.surface }
             ]}
             onPress={() => router.push(item.route as any)}
           >
@@ -53,20 +52,22 @@ function CustomDrawerContent(props: any) {
                 color={colors.primary}
                 style={styles.menuIcon}
               />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>
-                {item.title}
-              </Text>
+              <View style={styles.textContainer}>
+                <Text style={[styles.menuItemText, { color: colors.text }]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+              </View>
             </View>
           </Pressable>
         ))}
       </View>
-    </DrawerContentScrollView>
+      </DrawerContentScrollView>
+    </ImageBackground>
   );
 }
 
 export default function DrawerLayout() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
 
   return (
     <Drawer
@@ -80,7 +81,7 @@ export default function DrawerLayout() {
           backgroundColor: colors.primary,
         },
         headerTintColor: colors.white,
-        drawerActiveBackgroundColor: colors.primary + '20',
+        drawerActiveBackgroundColor: colors.surfaceSecondary,
         drawerActiveTintColor: colors.primary,
         drawerInactiveTintColor: colors.text,
       }}
@@ -98,48 +99,77 @@ export default function DrawerLayout() {
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+  },
   drawerContent: {
     flex: 1,
   },
   header: {
-    padding: 24,
-    borderBottomWidth: 1,
     alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  headerTitle: {
-    fontSize: 24,
+  drawerTitle: {
+    textAlign: 'center',
+    fontSize: 26,
     fontWeight: '700',
-    marginBottom: 6,
+    color: '#2F2F2F',
   },
   headerSubtitle: {
-    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 18,
+    fontSize: 14,
+    color: '#7A736B',
+    marginTop: 4,
   },
   menuContainer: {
     flex: 1,
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingHorizontal: 16,
   },
   menuItem: {
-    marginVertical: 3,
-    marginHorizontal: 16,
-    borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    minHeight: 52,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   menuItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
-  menuItemText: {
-    fontSize: 16,
-    fontWeight: '500',
+  textContainer: {
     flex: 1,
+    paddingRight: 10,
+  },
+  menuItemText: {
+    fontSize: 18,
+    lineHeight: 24,
+    includeFontPadding: true,
+    flex: 1,
+    marginLeft: 12,
+    flexShrink: 1,
   },
   menuIcon: {
-    marginRight: 16,
+    marginRight: 0,
     marginLeft: 0,
   },
 });

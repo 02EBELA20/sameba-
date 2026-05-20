@@ -3,13 +3,11 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useLayoutEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../../../../src/constants/theme';
-import { useReadingMode } from '../../../../../src/contexts/ReadingModeContext';
 import { MATTHEW } from '../../../../../src/data/bible/matthew';
 import { getChapterContent, getGospelBookBySlug } from '../../../../../src/data/gospels';
 
 export default function ChapterDetailScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   const { book, chapter } = useLocalSearchParams<{ book: string; chapter: string }>();
 
@@ -73,7 +71,7 @@ export default function ChapterDetailScreen() {
             router.push('/');
           }
         }}
-        style={[styles.backButton, { backgroundColor: colors.cardBackground }]}
+        style={[styles.backButton, { backgroundColor: colors.surface }]}
       >
         <Ionicons 
           name="chevron-back" 
@@ -90,7 +88,7 @@ export default function ChapterDetailScreen() {
         </Text>
       </View>
 
-      <View style={[styles.contentCard, { backgroundColor: colors.cardBackground }]}>
+      <View style={[styles.contentCard, { backgroundColor: colors.surface }]}>
         <Text style={[styles.contentTitle, { color: colors.text }]}>
           {chapterData.title}
         </Text>

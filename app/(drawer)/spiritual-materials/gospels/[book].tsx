@@ -3,12 +3,10 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useLayoutEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../../../src/constants/theme';
-import { useReadingMode } from '../../../../src/contexts/ReadingModeContext';
 import { getChaptersForBook, getGospelBookBySlug } from '../../../../src/data/gospels';
 
 export default function BookChaptersScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   const { book } = useLocalSearchParams<{ book: string }>();
 
@@ -51,10 +49,10 @@ export default function BookChaptersScreen() {
         </Text>
       </View>
 
-      {chapters.map((chapter) => (
+      {chapters.map((chapter, index) => (
         <TouchableOpacity
-          key={chapter.number}
-          style={[styles.chapterCard, { backgroundColor: colors.cardBackground }]}
+          key={`${chapter.number}-${index}`}
+          style={[styles.chapterCard, { backgroundColor: colors.surface }]}
           onPress={() => router.push(`/gospels/${book}/${chapter.number}` as any)}
           activeOpacity={0.7}
         >

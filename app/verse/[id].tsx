@@ -1,46 +1,39 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ImageBackground, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
-import { getDevotionalVerseById } from '../../src/data/devotional';
+import { getDevotionalVerseById, type DevotionalItem } from '../../src/data/devotional';
 
 export default function VerseDetailScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { toggleFavorite, isFavorite: checkIsFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   
-  const [verse, setVerse] = useState<any>(null);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [verse, setVerse] = useState<DevotionalItem | null>(null);
 
   useEffect(() => {
     if (id) {
-      const verseData = getDevotionalVerseById(parseInt(id, 10));
-      setVerse(verseData);
+      const verseData = getDevotionalVerseById(id);
+      setVerse(verseData || null);
     }
   }, [id]);
 
-  useEffect(() => {
-    if (verse) {
-      const verseId = `devotional-${id}`;
-      setIsFavorite(checkIsFavorite(verseId));
-    }
-  }, [verse, checkIsFavorite]);
-
+  
   const handleToggleFavorite = async () => {
     if (!verse) return;
-    const verseId = `devotional-${id}`;
+    
     const item = {
-      id: verseId,
+      id: verse.id, // Use the same ID as Home screen
       text: verse.text,
       book: verse.book,
       chapter: verse.chapter,
-      verse: verse.verse || parseInt(id),
-      source: 'devotional' as const
+      verse: verse.verse,
+      explanation: verse.explanation,
+      sourceTitle: verse.sourceTitle,
+      type: 'devotional' as const
     };
     toggleFavorite(item);
   };
@@ -62,105 +55,152 @@ export default function VerseDetailScreen() {
 
   if (!verse) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            მუხლი არ მოიძებნა
-          </Text>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: colors.primary }]}
-            onPress={handleBack}
-          >
-            <Text style={[styles.backButtonText, { color: colors.white }]}>
-              უკან
+      <ImageBackground
+        source={require('../../assets/images/clouds-bg.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
+            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+              მუხლი არ მოიძებნა
             </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.backButton, { backgroundColor: colors.primary }]}
+              onPress={handleBack}
+            >
+              <Text style={[styles.backButtonText, { color: colors.white }]}>
+                უკან
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </ImageBackground>
     );
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButtonContainer}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleToggleFavorite} style={styles.actionButton}>
-            <Ionicons
-              name={isFavorite ? 'star' : 'star-outline'}
-              size={24}
-              color={isFavorite ? colors.goldAccent : colors.text}
-            />
+    <ImageBackground
+      source={require('../../assets/images/clouds-bg.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <ScrollView 
+        style={[styles.container, { backgroundColor: 'transparent' }]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+      <View style={styles.card}>
+        <View style={styles.topRow}>
+          <TouchableOpacity onPress={handleBack}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
-            <Ionicons name="share-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      <View style={[styles.content, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.verseHeader}>
-          <Text style={[styles.verseReference, { color: colors.primary }]}>
-            {verse.book} {verse.chapter}:{verse.verse}
-          </Text>
+          <View style={styles.rightIcons}>
+            <TouchableOpacity onPress={handleToggleFavorite}>
+              <Ionicons
+                name={verse && isFavorite(verse.id) ? 'star' : 'star-outline'}
+                size={24}
+                color={verse && isFavorite(verse.id) ? '#FACC15' : colors.text}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleShare}>
+              <Ionicons name="share-outline" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <Text style={[styles.verseText, { color: colors.text, flex: 1, flexWrap: 'wrap', width: '100%' }]}>
+        <Text style={[styles.title, { color: '#8B6B3E' }]}>
+          {verse.book} {verse.chapter}:{verse.verse}
+        </Text>
+
+        <Text style={[styles.text, { color: '#3E3A36' }]}>
           {verse.text}
         </Text>
+
+        <Text style={[styles.explanationTitle, { color: '#8B6B3E' }]}>
+          განმარტება
+        </Text>
+
+        <Text style={[styles.explanation, { color: '#666' }]}>
+          {verse.explanation && verse.explanation.trim().length > 0 
+            ? verse.explanation 
+            : "ამ მუხლის განმარტება ჯერ დამატებული არ არის."
+          }
+        </Text>
+
+        {verse.sourceTitle && verse.sourceTitle.trim().length > 0 && (
+          <Text style={[styles.source, { color: '#888' }]}>
+            წყარო: {verse.sourceTitle}
+          </Text>
+        )}
       </View>
     </ScrollView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
-  header: {
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.84)',
+    padding: 20,
+    borderRadius: 18,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  title: {
+    fontSize: 16,
+    color: '#2C2C2C',
+    marginBottom: 10,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  explanationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C2C2C',
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  text: {
+    fontSize: 18,
+    lineHeight: 28,
+    textAlign: 'center',
+    color: '#1A1A1A',
+  },
+  topRow: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingBottom: 10,
+    marginBottom: 10,
   },
-  backButtonContainer: {
-    padding: 8,
-  },
-  headerActions: {
+  rightIcons: {
     flexDirection: 'row',
-    gap: 16,
-  },
-  actionButton: {
-    padding: 8,
-  },
-  content: {
-    margin: 20,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  verseHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  verseReference: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
-  },
-  verseText: {
-    fontSize: TYPOGRAPHY.fontSize.xl,
-    lineHeight: TYPOGRAPHY.lineHeight.relaxed,
-    textAlign: 'center',
-    marginBottom: 24,
+    gap: 12,
   },
   errorContainer: {
     flex: 1,
@@ -183,5 +223,19 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: TYPOGRAPHY.fontSize.base,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
+  },
+  explanation: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 10,
+    fontStyle: 'italic',
+  },
+  source: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
   },
 });

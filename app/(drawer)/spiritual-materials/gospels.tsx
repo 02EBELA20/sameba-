@@ -3,12 +3,10 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../../src/constants/theme';
-import { useReadingMode } from '../../../src/contexts/ReadingModeContext';
 import { GOSPEL_BOOKS } from '../../../src/data/gospels';
 
 export default function GospelsScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
 
   return (
@@ -28,7 +26,7 @@ export default function GospelsScreen() {
       {GOSPEL_BOOKS.map((book) => (
         <TouchableOpacity
           key={book.id}
-          style={[styles.bookCard, { backgroundColor: colors.cardBackground }]}
+          style={[styles.bookCard, { backgroundColor: colors.surface }]}
           onPress={() => router.push(`/gospels/${book.slug}` as any)}
           activeOpacity={0.7}
         >

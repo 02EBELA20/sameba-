@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors } from '../constants/theme';
 
 interface ButtonProps {
@@ -27,7 +27,7 @@ export function CustomModal({
   buttons,
   theme = 'light',
 }: CustomModalProps) {
-  const colors = getThemeColors(theme === 'dark');
+  const colors = getThemeColors();
 
   return (
     <Modal
@@ -37,7 +37,7 @@ export function CustomModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+        <View style={[styles.container, { backgroundColor: colors.surface }]}>
           <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           
           {message && (

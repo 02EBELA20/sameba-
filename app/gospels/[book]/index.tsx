@@ -7,7 +7,7 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 
 export default function BookIndexScreen() {
   const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   const { book } = useLocalSearchParams<{ book: string }>();
 
@@ -58,14 +58,14 @@ export default function BookIndexScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={chapters}
-        keyExtractor={(item) => item.number.toString()}
+        keyExtractor={(item, index) => `${item.number}-${index}`}
         numColumns={2}
         contentContainerStyle={styles.chaptersContainer}
         columnWrapperStyle={styles.columnWrapper}
         ListHeaderComponent={renderHeader}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.chapterCard, { backgroundColor: colors.cardBackground }]}
+            style={[styles.chapterCard, { backgroundColor: colors.surface }]}
             onPress={() => handleChapterPress(item.number)}
             activeOpacity={0.7}
           >

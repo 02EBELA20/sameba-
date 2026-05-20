@@ -1,43 +1,29 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext } from 'react';
 
-interface ReadingModeContextType {
+type ReadingModeContextType = {
   readingMode: boolean;
+  isReadingMode: boolean;
   toggleReadingMode: () => void;
-}
+  setReadingMode: (value: boolean) => void;
+};
 
-const ReadingModeContext = createContext<ReadingModeContextType | undefined>(undefined);
+const ReadingModeContext = createContext<ReadingModeContextType>({
+  readingMode: false,
+  isReadingMode: false,
+  toggleReadingMode: () => {},
+  setReadingMode: () => {},
+});
 
 export function ReadingModeProvider({ children }: { children: React.ReactNode }) {
-  const [readingMode, setReadingMode] = useState(false);
-
-  useEffect(() => {
-    loadReadingMode();
-  }, []);
-
-  const loadReadingMode = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('reading_mode');
-      if (saved !== null) {
-        setReadingMode(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error('Error loading reading mode:', error);
-    }
-  };
-
-  const toggleReadingMode = async () => {
-    try {
-      const newMode = !readingMode;
-      setReadingMode(newMode);
-      await AsyncStorage.setItem('reading_mode', JSON.stringify(newMode));
-    } catch (error) {
-      console.error('Error saving reading mode:', error);
-    }
-  };
-
   return (
-    <ReadingModeContext.Provider value={{ readingMode, toggleReadingMode }}>
+    <ReadingModeContext.Provider
+      value={{
+        readingMode: false,
+        isReadingMode: false,
+        toggleReadingMode: () => {},
+        setReadingMode: () => {},
+      }}
+    >
       {children}
     </ReadingModeContext.Provider>
   );
@@ -45,7 +31,7 @@ export function ReadingModeProvider({ children }: { children: React.ReactNode })
 
 export function useReadingMode() {
   const context = useContext(ReadingModeContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useReadingMode must be used within a ReadingModeProvider');
   }
   return context;

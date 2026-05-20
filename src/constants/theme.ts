@@ -1,28 +1,44 @@
-export const COLORS = {
-  primary: '#8B6F47',        // Bronze-brown - Orthodox icon/metal tones
-  secondary: '#A0826D',      // Muted gold-brown - subtle gold accents
-  background: '#F4E8D0',     // Warm parchment - traditional paper feel
-  cardBackground: '#FAF6F0',  // Soft ivory - aged paper look
-  text: '#3D352A',          // Deep warm charcoal - elegant dark brown
-  textSecondary: '#6B5D4F',  // Soft brown-gray - readable but muted
-  border: '#D4C4B0',        // Subtle parchment-brown - aged paper edges
-  shadow: '#8B6F4715',       // Very soft bronze shadow - gentle depth
-  goldAccent: '#B8956F',     // Refined Orthodox gold - traditional accents
-  white: '#FFFFFF',
-}
+export type AppThemeColors = {
+  background: string;
+  backgroundSoft: string;
+  surface: string;
+  surfaceSecondary: string;
+  primary: string;
+  primaryDark: string;
+  accent: string;
+  active: string;
+  drawerActive: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  header: string;
+  buttonText: string;
+  icon: string;
+  shadow: string;
+  white: string;
+};
 
-export const DARK_COLORS = {
-  primary: '#C4A574',        // Warmer bronze for dark mode
-  secondary: '#D4B595',      // Lighter muted gold for dark mode
-  background: '#2A2520',     // Dark parchment - not harsh
-  cardBackground: '#3D352A',  // Soft dark bronze cards
-  text: '#FAF6F0',          // Warm ivory text for dark mode
-  textSecondary: '#D4C4B0',  // Parchment secondary text
-  border: '#6B5D4F',         // Dark parchment borders
-  shadow: '#00000030',       // Darker shadows for dark mode
-  goldAccent: '#E5C29F',     // Warmer Orthodox gold accent
+export const DEFAULT_THEME_COLORS: AppThemeColors = {
+  background: '#F3F8FC',
+  backgroundSoft: '#EAF4FB',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#E8F1F7',
+  primary: '#2F5F7E',
+  primaryDark: '#23485F',
+  accent: '#6FA8C9',
+  active: '#2E8C89',
+  drawerActive: '#DCECF6',
+  text: '#1F2D36',
+  textSecondary: '#50616C',
+  textMuted: '#7A8A94',
+  border: '#D5E4EE',
+  header: '#2F5F7E',
+  buttonText: '#FFFFFF',
+  icon: '#2F5F7E',
+  shadow: '#000000',
   white: '#FFFFFF',
-}
+};
 
 export const TYPOGRAPHY = {
   fontSize: { xs: 11, sm: 13, base: 15, lg: 17, xl: 20, xxl: 24, xxxl: 30 },
@@ -34,6 +50,6 @@ export const TYPOGRAPHY = {
   },
 }
 
-export function getThemeColors(isDark: boolean) {
-  return isDark ? DARK_COLORS : COLORS;
+export function getThemeColors() {
+  return DEFAULT_THEME_COLORS;
 }

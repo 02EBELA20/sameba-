@@ -3,13 +3,11 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
 import { searchVerses } from '../../src/utils/verse';
 
 
 export default function SearchScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,16 +16,20 @@ export default function SearchScreen() {
     return searchVerses(searchQuery);
   }, [searchQuery]);
 
-  const handleResultPress = (result: any) => {
-    if (result.type === 'verse') {
-      router.push(`/verse/${result.id}`);
+  const handleItemPress = (item: any) => {
+    if (item.type === 'verse') {
+      router.push(`/verse/${item.id}` as any);
+    } else if (item.type === 'prayer') {
+      router.push('/(drawer)/prayers' as any);
+    } else if (item.type === 'commandment') {
+      router.push('/(drawer)/ten-commandments' as any);
     }
   };
 
   const renderSearchResult = ({ item }: { item: any }) => (
     <TouchableOpacity
-      style={[styles.resultItem, { backgroundColor: colors.cardBackground }]}
-      onPress={() => handleResultPress(item)}
+      style={[styles.resultItem, { backgroundColor: colors.surface }]}
+      onPress={() => handleItemPress(item)}
     >
       <View style={styles.resultHeader}>
         <Text style={[styles.resultCategory, { color: colors.primary }]}>
@@ -49,7 +51,7 @@ export default function SearchScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.searchContainer}>
-        <View style={[styles.searchInputContainer, { backgroundColor: colors.cardBackground }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: colors.surface }]}>
           <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -122,6 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    minHeight: 80,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -138,25 +141,39 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.sm,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
     textTransform: 'uppercase',
+    lineHeight: TYPOGRAPHY.fontSize.sm * 1.4,
+    paddingTop: 2,
+    includeFontPadding: true,
   },
   resultTitle: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
     flex: 1,
     textAlign: 'right',
+    flexShrink: 1,
+    lineHeight: TYPOGRAPHY.fontSize.sm * 1.4,
+    paddingTop: 2,
+    includeFontPadding: true,
   },
   resultText: {
     fontSize: TYPOGRAPHY.fontSize.sm,
-    lineHeight: TYPOGRAPHY.lineHeight.normal,
+    lineHeight: TYPOGRAPHY.fontSize.sm * 1.4,
+    flexShrink: 1,
+    paddingTop: 2,
+    includeFontPadding: true,
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
     paddingVertical: 60,
   },
   emptyText: {
     fontSize: TYPOGRAPHY.fontSize.base,
     marginTop: 16,
     textAlign: 'center',
+    lineHeight: TYPOGRAPHY.fontSize.base * 1.4,
+    paddingTop: 2,
+    includeFontPadding: true,
   },
 });

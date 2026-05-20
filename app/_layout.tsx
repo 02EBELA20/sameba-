@@ -4,8 +4,8 @@ import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, TouchableOpacity } from 'react-native';
 import { FavoritesProvider } from '../src/contexts/FavoritesContext';
-import { ReadingModeProvider } from '../src/contexts/ReadingModeContext';
-import { initNotifications, maintainScheduleIfNeeded, normalizeVerseIdFromData } from '../src/services/notifications';
+import { ThemeProvider } from '../src/contexts/ThemeContext';
+import { initNotifications, normalizeVerseIdFromData } from '../src/services/notifications';
 
 // BackButton component
 function BackButton() {
@@ -37,6 +37,17 @@ export default function RootLayout() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
+    // Set global notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+
     initNotifications();
 
     const handleNotificationResponse = (response: any) => {
@@ -59,7 +70,7 @@ export default function RootLayout() {
         appStateRef.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        maintainScheduleIfNeeded();
+        // Function removed - notifications are now handled by the simplified schedule
       }
       appStateRef.current = nextAppState;
     };
@@ -70,54 +81,54 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <FavoritesProvider>
-      <ReadingModeProvider>
+    <ThemeProvider>
+      <FavoritesProvider>
         <Stack 
-          screenOptions={{
-            headerShown: true,
-            headerLeft: () => <BackButton />,
-            headerStyle: {
-              backgroundColor: '#8B6F47',
-            },
-            headerTintColor: '#FAF6F0',
-            headerTitleStyle: {
-              fontWeight: '600',
-            },
-          }}
-        >
-          <Stack.Screen 
-            name="(drawer)" 
-            options={{ 
-              headerShown: false,
-              title: 'SAMEBA'
-            }} 
-          />
-          <Stack.Screen 
-            name="verse/[id]" 
-            options={{ 
-              title: 'ლექსიკონი'
-            }} 
-          />
-          <Stack.Screen 
-            name="gospels" 
-            options={{ 
-              title: 'სახარება'
-            }} 
-          />
-          <Stack.Screen 
-            name="gospels/[book]" 
-            options={{ 
-              title: 'სახარება'
-            }} 
-          />
-          <Stack.Screen 
-            name="gospels/[book]/[chapter]" 
-            options={{ 
-              title: 'თავი'
-            }} 
-          />
-        </Stack>
-      </ReadingModeProvider>
-    </FavoritesProvider>
-  );
+              screenOptions={{
+                headerShown: true,
+                headerLeft: () => <BackButton />,
+                headerStyle: {
+                  backgroundColor: '#8B6F47',
+                },
+                headerTintColor: '#FAF6F0',
+                headerTitleStyle: {
+                  fontWeight: '600',
+                },
+              }}
+            >
+              <Stack.Screen 
+                name="(drawer)" 
+                options={{ 
+                  headerShown: false,
+                  title: 'SAMEBA'
+                }} 
+              />
+              <Stack.Screen 
+                name="verse/[id]" 
+                options={{ 
+                  title: 'ლექსიკონი'
+                }} 
+              />
+              <Stack.Screen 
+                name="gospels" 
+                options={{ 
+                  title: 'სახარება'
+                }} 
+              />
+              <Stack.Screen 
+                name="gospels/[book]" 
+                options={{ 
+                  title: 'სახარება'
+                }} 
+              />
+              <Stack.Screen 
+                name="gospels/[book]/[chapter]" 
+                options={{ 
+                  title: 'თავი'
+                }} 
+              />
+            </Stack>
+          </FavoritesProvider>
+      </ThemeProvider>
+    );
 }

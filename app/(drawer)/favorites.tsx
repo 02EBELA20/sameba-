@@ -4,15 +4,11 @@ import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getThemeColors, TYPOGRAPHY } from '../../src/constants/theme';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
-import { useReadingMode } from '../../src/contexts/ReadingModeContext';
 
 export default function FavoritesScreen() {
-  const { readingMode } = useReadingMode();
-  const colors = getThemeColors(readingMode);
+  const colors = getThemeColors();
   const router = useRouter();
   const { favorites, removeFavorite } = useFavorites();
-
-  console.log("FAVORITES in screen:", favorites);
 
   const getGeorgianBookName = (book: string) => {
     const names: Record<string, string> = {
@@ -25,21 +21,20 @@ export default function FavoritesScreen() {
   };
 
   const getDisplayReference = (item: any) => {
-    if (item.source === 'gospel' && item.book && item.chapter && item.verse) {
+    if (item.type === 'bible' && item.book && item.chapter && item.verse) {
       return `${getGeorgianBookName(item.book)} ${item.chapter}:${item.verse}`;
-    } else if (item.source === 'devotional') {
+    } else if (item.type === 'devotional') {
       return 'ლექსიკონი';
     }
     return '';
   };
 
   const handleVersePress = (item: any) => {
-    if (item.source === 'gospel' && item.book && item.chapter) {
+    if (item.type === 'bible' && item.book && item.chapter) {
       router.push(`/gospels/${item.book}/${item.chapter}`);
-    } else if (item.source === 'devotional') {
-      // Extract index from devotional ID
-      const index = item.id.replace('devotional-', '');
-      router.push(`/verse/${index}`);
+    } else if (item.type === 'devotional') {
+      // For devotional items, use the ID directly
+      router.push(`/verse/${item.id}`);
     }
   };
 
@@ -55,13 +50,15 @@ export default function FavoritesScreen() {
     
     return (
       <TouchableOpacity
-        style={[styles.favoriteItem, { backgroundColor: colors.cardBackground }]}
+        style={[styles.favoriteItem, { backgroundColor: colors.surface }]}
         onPress={() => handleVersePress(item)}
       >
         <View style={styles.itemHeader}>
-          <Text style={[styles.verseReference, { color: colors.primary }]}>
-            {getDisplayReference(item)}
-          </Text>
+          <View style={styles.textContainer}>
+            <Text style={[styles.verseReference, { color: colors.primary, flexShrink: 1, flexWrap: 'wrap' }]}>
+              {getDisplayReference(item)}
+            </Text>
+          </View>
           <TouchableOpacity
             onPress={() => handleRemoveFavorite(item.id)}
             style={styles.favoriteButton}
@@ -69,12 +66,12 @@ export default function FavoritesScreen() {
             <Ionicons
               name="star"
               size={20}
-              color={colors.goldAccent}
+              color="#FACC15"
             />
           </TouchableOpacity>
         </View>
         
-        <Text style={[styles.verseText, { color: colors.text, flex: 1, flexWrap: 'wrap', width: '100%' }]}>
+        <Text style={[styles.verseText, { color: colors.text, flexShrink: 1, flexWrap: 'wrap' }]}>
           {item.text}
         </Text>
       </TouchableOpacity>
@@ -116,7 +113,7 @@ export default function FavoritesScreen() {
       <FlatList
         data={favorites}
         renderItem={renderFavoriteItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
@@ -144,9 +141,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   favoriteItem: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
     marginBottom: 12,
+    minHeight: 80,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -155,26 +153,37 @@ const styles = StyleSheet.create({
   },
   itemHeader: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 12,
+  },
+  textContainer: {
+    flex: 1,
+    paddingRight: 10,
   },
   verseReference: {
     fontSize: TYPOGRAPHY.fontSize.sm,
     fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    flexShrink: 1,
+    lineHeight: TYPOGRAPHY.fontSize.sm * 1.4,
+    paddingTop: 2,
+    includeFontPadding: true,
   },
   favoriteButton: {
     padding: 4,
   },
   verseText: {
     fontSize: 17,
-    lineHeight: 24,
-    marginBottom: 8,
+    lineHeight: 17 * 1.4,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    paddingTop: 2,
+    includeFontPadding: true,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
     paddingHorizontal: 40,
   },
   emptyText: {
@@ -182,15 +191,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     marginBottom: 30,
+    lineHeight: TYPOGRAPHY.fontSize.lg * 1.4,
+    paddingTop: 2,
+    includeFontPadding: true,
   },
   homeButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
+
   homeButtonText: {
-    fontSize: TYPOGRAPHY.fontSize.base,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
